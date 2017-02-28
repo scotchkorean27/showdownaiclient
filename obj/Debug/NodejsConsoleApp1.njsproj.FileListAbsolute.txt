@@ -1,0 +1,2 @@
+D:\Documents\Visual Studio 2015\Projects\NodejsConsoleApp1\NodejsConsoleApp1\obj\Debug\NodejsConsoleApp1.njsprojResolveAssemblyReference.cache
+D:\Documents\Visual Studio 2015\Projects\NodejsConsoleApp1\NodejsConsoleApp1\bin\Microsoft.NodejsTools.WebRole.dll

@@ -1,0 +1,10 @@
+{
+  "name": "nodejs-console-app1",
+  "version": "0.0.0",
+  "description": "NodejsConsoleApp1",
+  "main": "app.js",
+  "author": {
+    "name": "Admin"
+  },
+  "dependencies": {"ws": "1.1.1", "hashmap": "2.0.6"}
+}
