@@ -267,7 +267,6 @@ class InterfaceLayer {
             this.format = arr[2];
         }
         else if (tag == "request") {
-            // console.log(line);
             var requestData = JSON.parse(arr[2]);
             if (!this.firstTurn) {
                 if (this.mySide == 'p1') {
@@ -279,7 +278,6 @@ class InterfaceLayer {
                     this.battle.join(this.mySide, this.uname, this.mySID, this.convertTeamToSet(requestData['side']['pokemon']));
                     
                 }
-                //console.log(this.battle.sides[0].name);
                 this.battle.sides[1 - this.mySID].pokemonLeft = this.battle.sides[this.mySID].pokemonLeft;
             }
             this.cTurnOptions = {};
@@ -360,7 +358,6 @@ class InterfaceLayer {
         else if (tag == 'turn') {
             // NTS process end of turn here too
             
-            // console.log(line);
             if (!this.firstTurn) {
                 this.firstTurn = true;
             }
@@ -372,23 +369,18 @@ class InterfaceLayer {
             else {
                 choice = this.agent.decide(this.battle, this.cTurnOptions, this.battle.sides[this.mySID]);
             }
-            // console.log('options: ' + Object.keys(this.cTurnOptions).length);
-            // console.log('choice: ' + choice);
             this.cLayer.send(this.id + '|/choose ' + choice, this.mySide);
                 // Add code that processes the end of a turn
         }
         else if (tag == 'callback') {
             if (arr[2] == 'trapped') {
-                // NTS: UPDATE THE GAME STATE TO REFLECT THIS
                 // So this is where things get complicated.  maybetrapped means that something caused the opponent to be trapped
                 // callback can confirm that they are trapped, but this doesnt tell us anything conclusive.
-                // Somehow have the assumption engine digest this data
                 // There's a specific confluence of events wherein a trapped callback reveals the ability of the opponent.
                 this.cLayer.send(this.id + '|/choose ' + this.agent.decide(this.battle, this.cTurnMoves, this.battle.sides[this.mySID]), this.mySide);
                 this.agent.digest(line);
             }
         }
-                //MOVES HAVE TO CHECK FOR TAG CHANGES
         else if (boringTags.indexOf(tag) > -1) {
                 // Tags that don't tell us anything new
         }
@@ -399,14 +391,8 @@ class InterfaceLayer {
             else {
                 console.log('I lost!');
             }
-            // This is really debug shit.  Has the system initiate another battle right after one ends.
-            // With enough battles, we would stumble upon bugs.  Debugging is wonderful.
-            // this.cLayer.send('|/search randombattle');
         }
-                // move Purely informative.  However, we still need to update PP of the using pokemon.
         else if (tag == 'move') {
-            // If I make this move, then I need to update the PP of the move I know I have
-            // Actually, it's easier to update PP of moves from the request data
             // Should also update lastmoveused
             // if arr[4] has [from] lockedmove and the user has the volatile twoturnmove, then we have to remove the volatile
             //      fs.appendFile('log.txt', line + '\n', function (err) { });
@@ -446,7 +432,7 @@ class InterfaceLayer {
         }
                 // -weather  Update model.  Can be upkeep (just up the turn counter).  Second value becomes 'none' upon ending
         else if (tag == '-weather') {
-            // Currently does not take into account whether the user has damp rock or similar items
+            // Currently does not take into account whether the user has damp rock or similar items.  This is hidden information, so there's no really good way to do this.
             // The weather tag by itself doesn't have that information.  We could conceivably do some voodoo with -move, but that's for another time.
             if (arr[3] && arr[4]) {
                 if (arr[4].split(' ')[1].startsWith(this.mySide)) {
@@ -535,9 +521,7 @@ class InterfaceLayer {
             this.runExternalRemoveSideCondition(this.battle.sides[sindex], status);
         }
                 // -prepare is weird.  add the twoturnmove volatile.  Refers to multi turn attacks like solarbeam and fly.  The move name is in the line
-                // -start is complicated.  gonna have to figure this out.  Refers to delayed single turn effects like Flash Fire, and volatile effects
         else if (tag == '-start') {
-            console.log(line);
             var status = arr[3];
             var sindex = parseInt(arr[2].substring(1)) - 1;
             if (status == 'typechange') {
@@ -561,20 +545,17 @@ class InterfaceLayer {
             }
         }
         else if (tag == '-end') {
-            console.log(line);
             var sindex = parseInt(arr[2].substring(1)) - 1;
             var status = arr[3];
             if (status.startsWith('move: ')) {
                 status = status.split(': ')[1].trim();
             }
             this.runExternalRemoveVolatile(this.battle.sides[sindex].active[0], status);
-            console.log(this.battle.sides[sindex].active[0].volatiles);
-            // in the event the ending effect is illusion, we need to do something different.
         }
         else if (tag == '-formechange') {
             var nForme = arr[3];
             var sindex = parseInt(arr[2].substring(1)) - 1;
-            this.battle.sides[sindex].active[0].formeChange(nForme);
+            this.battle.sides[sindex].active[0].formeChange(nForme, false);
             console.log('Forme Change! ' + this.battle.sides[sindex].active[0].baseSpecies + ' changed to ' + arr[3]);
         }
                 // drag and switch are functionally identical
@@ -588,7 +569,6 @@ class InterfaceLayer {
                         break;
                     }
                 }
-                    // console.log(line);
             }
             else {
                 var found = false;
@@ -630,12 +610,12 @@ class InterfaceLayer {
             setStat[statname] = statamt;
             this.battle.sides[sindex].active[0].setBoost(setStat);
         }
-        else if (tag == 'clearboost') {
+        else if (tag == '-clearboost') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.battle.sides[sindex].active[0].clearBoosts();
         }
             // Pretty much white herb, and only white herb
-        else if (tag == 'restoreboost') {
+        else if (tag == '-restoreboost') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             var boosts = {};
             for (let i in this.battle.sides[sindex].active[0].boosts) {
@@ -649,15 +629,59 @@ class InterfaceLayer {
                 // -activate refers to non-weather field effects: pseudoweather, terrain, as well as certain scripted effects, endure, etc.  Seems to be mostly single turn stuff.
                 // -fieldstart refers to pseudoweather
                 // transform uhhhh, yeahhh, no
-                // replace is for zoroark
+                // replace is for zoroark.  Sends the same data as drag and switch.
+        else if (tag == 'replace') {
+            if (arr[2].startsWith(this.mySide)) {
+                var pName = arr[3].split(',')[0];
+                // iterate through pokemon, if name found, then switch using that object and pos 0, else generate a new one, and do shit
+                for (var i = 0; i < this.battle.sides[this.mySID].pokemon.length; i++) {
+                    if (pName == this.battle.sides[this.mySID].pokemon[i].species) {
+                        this.runExternalSwitch(this.battle.sides[this.mySID].pokemon[i], 0);
+                        break;
+                    }
+                }
+            }
+            else {
+                var found = false;
+                var pInfo = arr[3].split(',');
+                var pName = pInfo[0];
+                for (var i = 0; i < this.battle.sides[1 - this.mySID].pokemon.length; i++) {
+                    if (pName == this.battle.sides[1 - this.mySID].pokemon[i].species) {
+                        this.runExternalSwitch(this.battle.sides[1 - this.mySID].pokemon[i], 0);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    var pLev = 100;
+                    var pGen = '';
+                    if (pInfo[1]) {
+                        if (pInfo[1].startsWith(' L')) {
+                            pLev = parseInt(pInfo[1].split('L')[1]);
+                        }
+                        if (pInfo[2]) {
+                            pGen = pInfo[2].trim();
+                        }
+                        else if (!pInfo[1].startsWith(' L')) {
+                            pGen = pInfo[1].trim();
+                        }
+                    }
+                    var npoke = this.agent.assumePokemon(pName, pLev, pGen, this.battle.sides[1 - this.mySID]);
+                    npoke.position = this.battle.sides[1 - this.mySID].pokemon.length;
+                    this.battle.sides[1 - this.mySID].pokemon.push(npoke);
+                    this.runExternalSwitch(npoke, 0);
+                }
+            }
+        }
                 // teampreview Standards ou only, requires a response of |/team ######|1 (where ###### is the preferred order of pokemon, which we have to reorder in the model)
                 // poke is a part of team preview.  Has roughly the same information as switch. |poke|p1|details|hasitem
         else {
         
             //    fs.appendFile('log.txt', line + '\n', function (err) { });
         
-            console.log(line);
+            //console.log(line);
         }
+        console.log(line);
     }
     process(text) {
         // console.log(text);
