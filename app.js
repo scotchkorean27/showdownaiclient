@@ -20,14 +20,15 @@ try {
     global.Config = require('./config/config');
 }
 
-var online = true;
+var online = false;
 
 // Online mode operates very very differently from offline.
 // Naturally, it needs a place to connect to.
 // Logging in is optional, although that makes it easier to check on your status later.
 // In this mode, everything you type into stdin is sent to the server.  This is one way to initiate battles.
-// For example, if you type in |/seaerch randommirror into stdin, it will place your ai into the queue for a Random Mirrors game.
+// For example, if you type in |/search randommirror into stdin, it will place your ai into the queue for a Random Mirrors game.
 // You can also do this in your program by adding a line at the end of this conditional block that says ws.send('|/search randommirror');
+// Manually challenging a player is achieved by entering '|/challenge USER format', with USER being the name of the user you wish to challengee.
 if (online) {
     var hashmap = require('hashmap');
     var querystring = require('querystring');
@@ -37,8 +38,12 @@ if (online) {
     // Things to be set by the programmer
     var ws = new WebSocket('ws://216.165.115.183:8000/showdown/websocket');
     var attemptLogin = true;
+    //  The agent will attempt to initiate this many battles
+    var battleCount = 2;
     var username = 'polytestai';
     var password = 'polyai';
+    // This is where you would put the formats that you are interested in having your AI participate in.
+    var formats = ['randombattle', 'randommirror'];
     
     // This is pretty much all netcode.  Not a ton to worry about here.
     var battles = new hashmap.HashMap();
@@ -71,8 +76,9 @@ if (online) {
             cuser = arr[2];
             console.log('Logged in as ' + cuser);
             ws.send('|/join lobby');
-            ws.send('|/search randommirror');
-            ws.send('|/search randombattle');
+            for (var format in formats) {
+                ws.send('|/search ' + format);
+            }
         }
         else if (tag == 'nametaken') {
             console.log('Login failed.  Logged in as guest.');
@@ -81,8 +87,12 @@ if (online) {
             var roomid = data.split("\n")[0].substring(1);
             if (battles.has(roomid) == false) {
                 battles.set(roomid, new InterfaceLayer(roomid, cuser, new WSLayer(this), new Agent()));
-                ws.send('|/search randommirror');
-                ws.send('|/search randombattle');
+                battleCount--;
+                if (battleCount > 0) {
+                    for (var format in formats) {
+                        ws.send('|/search ' + format);
+                    }
+                }
             }
             battles.get(roomid).process(data.substring(roomid.length + 2));
         }
@@ -156,5 +166,5 @@ else {
         }
     });
     var game = new OfflineGame();
-    game.playGames(new OTLAgent(), new OTLAgent(), 1, 'randommirror');
+    game.playGames(new Agent(), new Agent(), 1, 'randombattle');
 }
