@@ -8,7 +8,7 @@ var Agent = require('./agents/RandomAgent').Agent;
 var OTLAgent = require('./agents/OTLAgent').Agent;
 
 try {
-    require.resolve('./config/config');
+    require.resolve('./zarel/config/config');
 } catch (err) {
     if (err.code !== 'MODULE_NOT_FOUND') throw err; // should never happen
     
@@ -17,7 +17,7 @@ try {
         fs.readFileSync(path.resolve(__dirname, 'config/config-example.js'))
     );
 } finally {
-    global.Config = require('./config/config');
+    global.Config = require('./zarel/config/config');
 }
 
 var online = false;
