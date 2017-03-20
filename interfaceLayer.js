@@ -3,7 +3,7 @@
 var simulator = require('./zarel/battle-engine').Battle;
 var fs = require('fs');
 
-
+// NTS: Due to zoroark-related nonsense, the order of pokemon on the server may be different from the order on the client.  Use strings for all lookups to ensure this doesn't become a problem
 class InterfaceLayer {
     constructor(id, username, cLayer, agent) {
         this.id = id;
@@ -16,6 +16,8 @@ class InterfaceLayer {
         this.cLayer = cLayer;
         this.agent = agent;
         this.format = '';
+        // Because apparently, when zoroark is active, the server lies to everyone
+        this.zoroarkActive = false;
     }
 
     convertTeamToSet(pokemon) {
@@ -235,7 +237,9 @@ class InterfaceLayer {
             delete pokemon.volatiles[status.id];
             return result;
         }
-            // console.log(pokemon.volatiles);
+        //console.log(status + ' started!');
+        //console.log(pokemon.volatiles);
+        //console.log(pokemon.hp);
     }
 
     runExternalTypeChange(pokemon, ntype) {
@@ -246,15 +250,16 @@ class InterfaceLayer {
     }
 
     runExternalRemoveVolatile(pokemon, status) {
-        console.log(status);
+        console.log(status + ' ended!');
         pokemon.removeVolatile(status);
+       // console.log(pokemon.volatiles);
     }
 
 
     processLine(line) {
     
         // right now, super, immune, resist are counted as boring tags.  They do present relevant information in case the information given doesnt line up for whatever reason (see zororark), but in a very niche case, and takes more work to digest
-        var boringTags = ["", " ", "init", "title", "j", "gametype", "gen", "seed", "rated", "choice", "-supereffective", "-resisted", "-miss", "-immune", "-crit", "faint", "raw", 'fail', 'cant', '-hitcount'];
+        var boringTags = ["", " ", "init", "title", "j", "gametype", "gen", "seed", "rated", "choice", "-supereffective", "-resisted", "-miss", "-immune", "-crit", "faint", "raw", 'fail', 'cant', '-hitcount', '-singleturn', '-activate', '-fail'];
         var arr = line.split("|");
         var tag = arr[1];
         if (tag == "player") {
@@ -298,6 +303,9 @@ class InterfaceLayer {
                 }
             }
             if (requestData['side'] && !(requestData['active'] && requestData['active'][0]['trapped'])) {
+                // Basically, if we switch to zoroark, the request data will reflect it, but the switch event data will not.
+                // Therefore, if a switch event happens on this turn, we override the swapped pokemon with zoroark
+                this.zoroarkActive = requestData['side']['pokemon'][0].details.startsWith('Zoroark');
                 for (var i = 1; i < requestData['side']['pokemon'].length; i++) {
                     if (requestData['side']['pokemon'][i].condition.indexOf('fnt') == -1) {
                         this.cTurnOptions['switch ' + (i + 1)] = requestData['side']['pokemon'][i];
@@ -305,15 +313,19 @@ class InterfaceLayer {
                 }
             }
             if (requestData['forceSwitch'] && requestData['forceSwitch'][0]) {
+                // Some weird bullshit happens when 
                 this.cLayer.send(this.id + '|/choose ' + this.agent.decide(this.battle, this.cTurnOptions, this.battle.sides[this.mySID]), this.mySide);
             }
         }
         else if (tag == 'switch') {
-            // console.log(line);
             // As of right now, this only supports single battles. I haven't seen the protocol for doubles yet.
             // I think it has something to do with the letter that comes with the player id (a, b, c)
             if (arr[2].startsWith(this.mySide)) {
                 var pName = arr[3].split(',')[0];
+                if (this.zoroarkActive == true) {
+                    pName = 'Zoroark';
+                    this.zoroarkActive = false;
+                }
                 // iterate through pokemon, if name found, then switch using that object and pos 0, else generate a new one, and do shit
                 for (var i = 0; i < this.battle.sides[this.mySID].pokemon.length; i++) {
                     if (pName == this.battle.sides[this.mySID].pokemon[i].species) {
@@ -357,10 +369,11 @@ class InterfaceLayer {
         }
         else if (tag == 'turn') {
             // NTS process end of turn here too
-            
+
             if (!this.firstTurn) {
                 this.firstTurn = true;
             }
+            this.zoroarkActive = false;
             var choice = '';
             // This happens if we locked ourselves into a move (See: Solarbeam, fly, outrage, phantom force).  Resolved by arbitrarily sending a random thing.
             if (Object.keys(this.cTurnOptions).length == 0) {
@@ -396,6 +409,13 @@ class InterfaceLayer {
             // Should also update lastmoveused
             // if arr[4] has [from] lockedmove and the user has the volatile twoturnmove, then we have to remove the volatile
             //      fs.appendFile('log.txt', line + '\n', function (err) { });
+            var sindex = parseInt(arr[2].substring(1)) - 1;
+            if (arr[5] && arr[5] == '[from]lockedmove') {
+                console.log(line);
+                var sindex = parseInt(arr[2].substring(1)) - 1;
+                this.runExternalRemoveVolatile(this.battle.sides[sindex].active[0], 'twoturnmove');
+                this.runExternalRemoveVolatile(this.battle.sides[sindex].active[0], toId(arr[3]));
+            }
             if (!arr[2].startsWith(this.mySide)) {
                 this.runExternalAddMove(this.battle.sides[1 - this.mySID].active[0], arr[3]);
                 this.battle.sides[1 - this.mySID].active[0].lastMove = this.battle.getMove(arr[3]).id;
@@ -521,6 +541,20 @@ class InterfaceLayer {
             this.runExternalRemoveSideCondition(this.battle.sides[sindex], status);
         }
                 // -prepare is weird.  add the twoturnmove volatile.  Refers to multi turn attacks like solarbeam and fly.  The move name is in the line
+                // adding twoturnmove doesn't work using runExternalAddVolatile, just because of the way it works (it actually adds a second volatile in its onstart event using data we can't really send externally)
+                // we use the battleengine's addvolatile for twoturnmove since it shouldn't throw any really problematic events
+                // we then remove the '' volatile that twoturnmove's onstart event adds
+                // then we manually add the second volatile
+        else if (tag == '-prepare') {
+            console.log(line);
+            var sindex = parseInt(arr[2].substring(1)) - 1;
+            this.battle.sides[sindex].active[0].addVolatile('twoturnmove', this.battle.sides[1 - sindex].active[0]);
+            this.runExternalRemoveVolatile(this.battle.sides[sindex].active[0], '');
+            this.runExternalAddVolatile(this.battle.sides[sindex].active[0], toId(arr[3]));
+            for (var entry in this.battle.sides[sindex].active[0].volatiles) {
+                console.log(entry);
+            }
+        }
         else if (tag == '-start') {
             var status = arr[3];
             var sindex = parseInt(arr[2].substring(1)) - 1;
@@ -550,6 +584,9 @@ class InterfaceLayer {
             if (status.startsWith('move: ')) {
                 status = status.split(': ')[1].trim();
             }
+            if (status.startsWith('ability')) {
+                status = arr[3].split(': ')[1].trim();
+            }
             this.runExternalRemoveVolatile(this.battle.sides[sindex].active[0], status);
         }
         else if (tag == '-formechange') {
@@ -562,6 +599,10 @@ class InterfaceLayer {
         else if (tag == 'drag') {
             if (arr[2].startsWith(this.mySide)) {
                 var pName = arr[3].split(',')[0];
+                if (this.zoroarkActive == true) {
+                    pName = 'Zoroark';
+                    this.zoroarkActive = false;
+                }
                 // iterate through pokemon, if name found, then switch using that object and pos 0, else generate a new one, and do shit
                 for (var i = 0; i < this.battle.sides[this.mySID].pokemon.length; i++) {
                     if (pName == this.battle.sides[this.mySID].pokemon[i].species) {
@@ -614,6 +655,11 @@ class InterfaceLayer {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.battle.sides[sindex].active[0].clearBoosts();
         }
+            // Haze, and only Haze
+        else if (tag == '-clearallboost') {
+            this.battle.sides[0].active[0].clearBoosts();
+            this.battle.sides[1].active[0].clearBoosts();
+        }
             // Pretty much white herb, and only white herb
         else if (tag == '-restoreboost') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
@@ -626,22 +672,15 @@ class InterfaceLayer {
             this.battle.sides[sindex].active[0].setBoost(boosts);
         }
                 // -detailchange is irrelevant here.  No ubers means no primal means no detailchanges
-                // -activate refers to non-weather field effects: pseudoweather, terrain, as well as certain scripted effects, endure, etc.  Seems to be mostly single turn stuff.
-                // -fieldstart refers to pseudoweather
-                // transform uhhhh, yeahhh, no
+                // -fieldstart refers to pseudoweather as well as terrain.  Because they are processed differently, we have to check whether it is a pseudoweather or a terrain when this line is processed
+                // transform to the best of my knowledge doesn't set off any weird things, so we can just call that directly
+        else if (tag == '-transform') {
+            var sindex = parseInt(arr[2].substring(1)) - 1;
+            this.battle.sides[sindex].active[0].transformInto(this.battle.sides[1 - sindex].active[0], this.battle.sides[sindex].active[0]);
+        }
                 // replace is for zoroark.  Sends the same data as drag and switch.
         else if (tag == 'replace') {
-            if (arr[2].startsWith(this.mySide)) {
-                var pName = arr[3].split(',')[0];
-                // iterate through pokemon, if name found, then switch using that object and pos 0, else generate a new one, and do shit
-                for (var i = 0; i < this.battle.sides[this.mySID].pokemon.length; i++) {
-                    if (pName == this.battle.sides[this.mySID].pokemon[i].species) {
-                        this.runExternalSwitch(this.battle.sides[this.mySID].pokemon[i], 0);
-                        break;
-                    }
-                }
-            }
-            else {
+            if (!arr[2].startsWith(this.mySide)) {
                 var found = false;
                 var pInfo = arr[3].split(',');
                 var pName = pInfo[0];
@@ -678,10 +717,10 @@ class InterfaceLayer {
         else {
         
             //    fs.appendFile('log.txt', line + '\n', function (err) { });
-        
-            //console.log(line);
+            console.log(line);
+            
         }
-        console.log(line);
+        
     }
     process(text) {
         // console.log(text);
