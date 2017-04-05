@@ -166,5 +166,5 @@ else {
         }
     });
     var game = new OfflineGame();
-    game.playGames(new Agent(), new Agent(), 10, 'randombattle');
+    game.playGames(new Agent(), new Agent(), 1000, 'randombattle');
 }

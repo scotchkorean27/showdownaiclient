@@ -1,0 +1,80 @@
+Syntax
+	Constraints on how to combine elements to derive some larger meaningful unit
+	Grammar != meaning  (just because a sentence is well formed doesn't mean it makes sense) (a poorly formed sentence can still make sense)
+	A lot of our knowledge about grammar and stuff is implicit
+		You can demonstrate that you can do it, but it's hard to describe why or how
+	The order of words in sentences is variable
+		BUT, the elements generally stay intact
+			Elements being certain sets/combinations of words
+		These elements are called CONSTITUENTS
+	How you organize these consituents are called PHRASE STRUCTURE RULES
+	Constituents
+		For example, noun phrases
+			determinant, modifier, subject (the red book)
+		Can be tested by seeing if it makes sense in different places
+			topicalization
+				move the constituent to the front of the sentence
+			coordination
+				pair it with another noun phrase
+				does the constituent have to maintain its form to make sense?
+			Possible answer to a question
+				does the element have to maintain its form to be a valid answer to a question?
+
+	NP Phrase structure rule - rules for building the constituents
+		X -> Y  An X can be expressed as Y
+			That is, Y is a valid X
+		Parentheses means is optional
+		NP -> (Det) (Adj) N (P NP)
+	
+	Rules have to generate all of the constituents in a language
+	Phrases are subject to the same tests (topicalization, coordination, possible answer to a question)
+	
+	Verb phrases need some additional work for coordination
+		a reflexive pronoun can act as NP for generating a VP
+		
+	VP -> V (NP) (PP)
+		PP is a prepositional phrase
+	
+	PP -> P (NP)
+	
+	You can turn language phrases into trees
+	There's a compelling argument for expression as binary trees
+	
+		 VP
+	   /  \  \
+	  V   NP   PP
+	
+	     VP
+		/ 	\
+	  V		  /  \
+			NP   PP
+	
+	Look up syntax stuff on adjuncts and arguments, and rewrite rules and trasformative rules
+	
+	Not everything can be expressed in a phrase structure
+		"I believe the earth is flat"
+		
+	Note: The rules above are just a toy mini-grammar
+	
+	An established structural system implies the existence of a parsing mechanism
+		Tests to see if a string or text can be reduced to logical syntactic forms, and that they conform to the established logical grammar
+		
+	In PL, this also means converting a sequence of words and attempts to generate some sort of structural representation, like a parse trees
+	
+	Interpretation of an expression depends on its grammatical analysis
+		ambiguous sentences can be structured different ways, and they can be interpreted different ways
+		"John bought the book for susan"
+			John bought and gave the book to susan -> PP is an argument to VP
+			John bought the book that was originally intended for susan -> PP is an argument to NP
+			Two different possible tree structures
+		Di-transitive verbs take two arguments
+			both NP and PP
+	
+	Structure can ultimately define meaning
+		
+		
+		
+		
+		
+		
+		

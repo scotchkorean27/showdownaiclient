@@ -250,16 +250,38 @@ class InterfaceLayer {
     }
 
     runExternalRemoveVolatile(pokemon, status) {
-        console.log(status + ' ended!');
         pokemon.removeVolatile(status);
        // console.log(pokemon.volatiles);
     }
 
+    runExternalFieldEffect(status) {
+        if (status.endsWith('terrain')) {
+            this.battle.setTerrain(status);
+            console.log(this.battle.terrain);
+        }
+        else {
+            console.log(status);
+            this.battle.addPseudoWeather(status);
+            console.log(this.battle.pseudoWeather);
+        }
+    }
+
+    runExternalFieldEnd(status) {
+        if (status.endsWith('terrain')) {
+            this.battle.clearTerrain();
+            console.log(this.battle.terrain);
+        }
+        else {
+            console.log(status);
+            this.battle.removePseudoWeather(status);
+            console.log(this.battle.pseudoWeather);
+        }
+    }
 
     processLine(line) {
     
         // right now, super, immune, resist are counted as boring tags.  They do present relevant information in case the information given doesnt line up for whatever reason (see zororark), but in a very niche case, and takes more work to digest
-        var boringTags = ["", " ", "init", "title", "j", "gametype", "gen", "seed", "rated", "choice", "-supereffective", "-resisted", "-miss", "-immune", "-crit", "faint", "raw", 'fail', 'cant', '-hitcount', '-singleturn', '-activate', '-fail'];
+        var boringTags = ["", " ", "init", "title", "j", "gametype", "gen", "seed", "rated", "choice", "-supereffective", "-resisted", "-miss", "-immune", "-crit", "faint", "raw", 'fail', 'cant', '-hitcount', '-singleturn', '-activate', '-fail', '-singlemove', '-notarget'];
         var arr = line.split("|");
         var tag = arr[1];
         if (tag == "player") {
@@ -673,6 +695,22 @@ class InterfaceLayer {
         }
                 // -detailchange is irrelevant here.  No ubers means no primal means no detailchanges
                 // -fieldstart refers to pseudoweather as well as terrain.  Because they are processed differently, we have to check whether it is a pseudoweather or a terrain when this line is processed
+        else if (tag == '-fieldstart') {
+            console.log(line);
+            var status = arr[2]
+            if (status.startsWith('move:')) {
+                status = toId(status.split(': ')[1]);
+            }
+            this.runExternalFieldEffect(status);
+        }
+        else if (tag == '-fieldend') {
+            console.log(line);
+            var status = arr[2]
+            if (status.startsWith('move:')) {
+                status = toId(status.split(': ')[1]);
+            }
+            this.runExternalFieldEnd(status);
+        }
                 // transform to the best of my knowledge doesn't set off any weird things, so we can just call that directly
         else if (tag == '-transform') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
