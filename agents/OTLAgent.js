@@ -1,7 +1,9 @@
 ﻿'use strict';
 
 var Pokemon = require('../zarel/battle-engine').BattlePokemon;
+var deepcopy = require('deepcopy');
 
+// 
 class OTLAgent {
     constructor() { }
 
@@ -17,19 +19,12 @@ class OTLAgent {
 
     decide(gameState, options, mySide) {
         var maxDamage = 0;
-        var bOption = '';
-        //console.log(options);
+        var bOption = ''; 
         var oppactive = gameState.sides[1 - mySide.n].active;
-        //console.log(mySide.active[0].name + " vs " + oppactive[0].name);
-        //console.log(gameState.sides[1 - mySide.n].active);
-        //console.log(gameState.sides[1 - mySide.n].active[0].runImmunity);
-        //console.log(gameState.sides[1 - mySide.n].active.name);
-        //console.log(oppactive);
-        //console.log(oppactive.runImmunity('Ground'));
-        //console.log(options['move 1']);
         for (var option in options) {
+            var nstate = deepcopy(gameState);
             if (option.startsWith('move')) {
-                var cDamage = gameState.getDamage(mySide.active[0], oppactive[0], options[option].id, false);
+                var cDamage = nstate.getDamage(mySide.active[0], oppactive[0], options[option].id, false);
                 
                 if (cDamage && cDamage > maxDamage) {
                     console.log(mySide.active[0].name + "'s " + options[option].move + " is expected to deal " + cDamage + " damage to " + oppactive[0].name);
@@ -39,9 +34,9 @@ class OTLAgent {
             }
             else if (option.startsWith('switch')) {
                 var pIndex = parseInt(option.split(" ")[1]) - 1;
-                for (var move in gameState.sides[mySide.n].pokemon[pIndex].getMoves(null, false)) {
-                    var mID = (gameState.sides[mySide.n].pokemon[pIndex].moves[move]);
-                    var cDamage = gameState.getDamage(mySide.pokemon[pIndex], oppactive[0], mID, false);
+                for (var move in nstate.sides[mySide.n].pokemon[pIndex].getMoves(null, false)) {
+                    var mID = (nstate.sides[mySide.n].pokemon[pIndex].moves[move]);
+                    var cDamage = nstate.getDamage(mySide.pokemon[pIndex], oppactive[0], mID, false);
                     
                     if (cDamage && cDamage > maxDamage) {
                         console.log(mySide.pokemon[pIndex].name + "'s " + mID + " is expected to deal " + cDamage + " damage to " + oppactive[0].name);
@@ -56,9 +51,6 @@ class OTLAgent {
                 maxDamage = 1;
             }
         }
-        //console.log(options[bOption]);
-        //console.log(gameState.getDamage(myactive, oppactive, 'stoneedge', false));
-        //console.log(gameState.sides[0].pokemon[0].runImmunity);
         console.log(bOption);
         return bOption;
     }

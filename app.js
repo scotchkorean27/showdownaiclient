@@ -5,7 +5,7 @@ Tools.includeData();
 var OfflineGame = require('./OfflineGame').OfflineGame;
 var InterfaceLayer = require('./interfaceLayer').InterfaceLayer;
 var Agent = require('./agents/RandomAgent').Agent;
-var OTLAgent = require('./agents/OTLAgent').Agent;
+var OTLAgent = require('./agents/3TLAgent').Agent;
 
 try {
     require.resolve('./zarel/config/config');
@@ -153,7 +153,7 @@ if (online) {
 
     }
 
-    // The online version of the interface only really needs message thanks to socket nonsense, but the offline version needs to know the name of sender.
+    // The online version of the interface only really needs message, but the offline version needs to know the name of sender.
     // Seems like it'd be easier to discard the info argument at the communcation layer level rather than do some weird check at the interface layer.
     function send(message, info) {
         ws.send(message);
@@ -166,5 +166,5 @@ else {
         }
     });
     var game = new OfflineGame();
-    game.playGames(new Agent(), new Agent(), 1000, 'randombattle');
+    game.playGames(new OTLAgent(), new Agent(), 1, 'randombattle');
 }

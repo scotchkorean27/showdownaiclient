@@ -29,7 +29,8 @@ class RandomAgent {
     }
 
     decide(gameState, options, mySide) {
-        return this.fetch_random_key(options);
+        var choice = this.fetch_random_key(options);
+        return choice;
     }
 
     // A function that takes in a pokemon's name as string and level as integer, and returns a BattlePokemon object.
