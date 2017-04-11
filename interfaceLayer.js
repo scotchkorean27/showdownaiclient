@@ -90,7 +90,9 @@ class InterfaceLayer {
         }
         side.active[pos] = pokemon;
         pokemon.activeTurns = 0;
-        pokemon.statusData.stage = 0;
+        if (pokemon.statusData.stage) {
+            pokemon.statusData.stage = 0;
+        }
         for (let m in pokemon.moveset) {
             pokemon.moveset[m].used = false;
         }
@@ -312,8 +314,8 @@ class InterfaceLayer {
             if (requestData['active']) {
                 for (var i = 0; i < requestData['active'][0]['moves'].length; i++) {
                     if (requestData['active'][0]['moves'][i]['disabled'] == false && requestData['active'][0]['moves'][i].pp > 0) {
-                        this.cTurnOptions['move ' + (i + 1)] = requestData['active'][0]['moves'][i];
-                        this.cTurnMoves['move ' + (i + 1)] = requestData['active'][0]['moves'][i];
+                        this.cTurnOptions['move ' + requestData['active'][0]['moves'][i].id] = requestData['active'][0]['moves'][i];
+                        this.cTurnMoves['move ' + requestData['active'][0]['moves'][i].id] = requestData['active'][0]['moves'][i];
                         if (this.battle.sides[this.mySID].active[0]) {
                             for (var j = 0; j < this.battle.sides[this.mySID].active[0].moveset.length; j++) {
                                 if (requestData['active'][0]['moves'][i].id == this.battle.sides[this.mySID].active[0].moveset[j].id) {
@@ -333,6 +335,12 @@ class InterfaceLayer {
                         this.cTurnOptions['switch ' + (i + 1)] = requestData['side']['pokemon'][i];
                     }
                 }
+            }
+            for (var option in this.cTurnOptions) {
+                this.cTurnOptions[option].choice = option;
+            }
+            for (var option in this.cTurnMoves) {
+                this.cTurnMoves[option].choice = option;
             }
             if (requestData['forceSwitch'] && requestData['forceSwitch'][0]) {
                 // Some weird bullshit happens when 
@@ -385,12 +393,65 @@ class InterfaceLayer {
                     var npoke = this.agent.assumePokemon(pName, pLev, pGen, this.battle.sides[1 - this.mySID]);
                     npoke.position = this.battle.sides[1 - this.mySID].pokemon.length;
                     this.battle.sides[1 - this.mySID].pokemon.push(npoke);
+                    this.battle.sides[1 - this.mySID].team.push(npoke);
                     this.runExternalSwitch(npoke, 0);
                 }
             }
         }
         else if (tag == 'turn') {
-            // NTS process end of turn here too
+            // Because we never invoke the residual event (since that would set off a lot of other events), we need to manually update turn counters.
+            if (this.battle.weatherData.duration) {
+                this.battle.weatherData.duration--;
+            }
+            if (this.battle.terrainData.duration) {
+                this.battle.terrainData.duration--;
+            }
+            for (var status in this.battle.pseudoWeather) {
+                if (this.battle.pseudoWeather[status].duration) {
+                    this.battle.pseudoWeather[status].duration--;
+                }
+                if (this.battle.pseudoWeather[status].time) {
+                    this.battle.pseudoWeather[status].time++;
+                }
+                if (this.battle.pseudoWeather[status].stage) {
+                    this.battle.pseudoWeather[status].stage++;
+                }
+            }
+            for (var sideid in this.battle.sides) {
+                var side = this.battle.sides[sideid];
+                for (var status in side.sideConditions) {
+                    if (side.sideConditions[status].duration) {
+                        side.sideConditions[status].duration--;
+                    }
+                    if (side.sideConditions[status].time) {
+                        side.sideConditions[status].time++;
+                    }
+                    if (side.sideConditions[status].stage) {
+                        side.sideConditions[status].stage++;
+                    }
+                }
+                var pokemon = this.battle.sides[sideid].active[0];
+                if (pokemon.statusData.duration) {
+                    pokemon.statusData.duration--;
+                }
+                if (pokemon.statusData.time) {
+                    pokemon.statusData.time++;
+                }
+                if (pokemon.statusData.stage) {
+                    pokemon.statusData.stage++;
+                }
+                for (var status in pokemon.volatiles) {
+                    if (pokemon.volatiles[status].duration) {
+                        pokemon.volatiles[status].duration--;
+                    }
+                    if (pokemon.volatiles[status].time) {
+                        pokemon.volatiles[status].time++;
+                    }
+                    if (pokemon.volatiles[status].stage) {
+                        pokemon.volatiles[status].stage++;
+                    }
+                }
+            }
 
             if (!this.firstTurn) {
                 this.firstTurn = true;
@@ -416,17 +477,6 @@ class InterfaceLayer {
                 this.agent.digest(line);
             }
         }
-        else if (boringTags.indexOf(tag) > -1) {
-                // Tags that don't tell us anything new
-        }
-        else if (tag == 'win') {
-            if (arr[2] == this.uname) {
-                console.log('I won!');
-            }
-            else {
-                console.log('I lost!');
-            }
-        }
         else if (tag == 'move') {
             // Should also update lastmoveused
             // if arr[4] has [from] lockedmove and the user has the volatile twoturnmove, then we have to remove the volatile
@@ -446,7 +496,7 @@ class InterfaceLayer {
                 this.battle.sides[this.mySID].active[0].lastMove = this.battle.getMove(arr[3]).id;
             }
         }
-                // -damage Update model.  Change only opponent health to the fraction given.  Format: tag, pokemon, status (num/den status), maybe from
+        // -damage Update model.  Change only opponent health to the fraction given.  Format: tag, pokemon, status (num/den status), maybe from
         else if (tag == '-damage' || tag == '-heal') {
             if (arr[2].startsWith(this.mySide)) {
                 var info = arr[3];
@@ -472,7 +522,7 @@ class InterfaceLayer {
                 }
             }
         }
-                // -weather  Update model.  Can be upkeep (just up the turn counter).  Second value becomes 'none' upon ending
+        // -weather  Update model.  Can be upkeep (just up the turn counter).  Second value becomes 'none' upon ending
         else if (tag == '-weather') {
             // Currently does not take into account whether the user has damp rock or similar items.  This is hidden information, so there's no really good way to do this.
             // The weather tag by itself doesn't have that information.  We could conceivably do some voodoo with -move, but that's for another time.
@@ -491,7 +541,7 @@ class InterfaceLayer {
                 this.runExternalWeather(arr[2]);
             }
         }
-                // -status  Update model.  Almost purely informative.
+        // -status  Update model.  Almost purely informative.
         else if (tag == '-status') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.runExternalStatus(this.battle.sides[sindex].active[0], arr[3]);
@@ -500,34 +550,34 @@ class InterfaceLayer {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.runExternalStatus(this.battle.sides[sindex].active[0], '');
         }
-                // -ability digest
+        // -ability digest
         else if (tag == '-ability') {
             //  fs.appendFile('log.txt', line + '\n', function (err) { });
             if (!arr[2].startsWith(this.mySide)) {
                 this.runExternalAddAbility(this.battle.sides[1 - this.mySID].active[0], arr[3].trim());
             }
         }
-                // -item   Update model.  Tells us what item they have
+        // -item   Update model.  Tells us what item they have
         else if (tag == '-item') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.runExternalAddItem(this.battle.sides[sindex].active[0], arr[3]);
         }
-                // -enditem  Update model.  Item becomes unusable.
+        // -enditem  Update model.  Item becomes unusable.
         else if (tag == '-enditem') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.runExternalAddItem(this.battle.sides[sindex].active[0], '');
         }
-                // -unboost  Goes without saying
+        // -unboost  Goes without saying
         else if (tag == '-unboost') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.runExternalUnboost(this.battle.sides[sindex].active[0], arr[3], parseInt(arr[4]));
         }
-                // -boost  See Above
+        // -boost  See Above
         else if (tag == '-boost') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.runExternalBoost(this.battle.sides[sindex].active[0], arr[3], parseInt(arr[4]));
         }
-                // -sidestart refers to side level volatiles (entry hazards and such)
+        // -sidestart refers to side level volatiles (entry hazards and such)
         else if (tag == '-sidestart') {
             var status = '';
             if (arr[3].startsWith('move')) {
@@ -562,12 +612,12 @@ class InterfaceLayer {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.runExternalRemoveSideCondition(this.battle.sides[sindex], status);
         }
-                // -prepare is weird.  add the twoturnmove volatile.  Refers to multi turn attacks like solarbeam and fly.  The move name is in the line
-                // adding twoturnmove doesn't work using runExternalAddVolatile, just because of the way it works (it actually adds a second volatile in its onstart event using data we can't really send externally)
-                // we use the battleengine's addvolatile for twoturnmove since it shouldn't throw any really problematic events
-                // we then remove the '' volatile that twoturnmove's onstart event adds
-                // then we manually add the second volatile
         else if (tag == '-prepare') {
+            // -prepare is weird.  add the twoturnmove volatile.  Refers to multi turn attacks like solarbeam and fly.  The move name is in the line
+            // adding twoturnmove doesn't work using runExternalAddVolatile, just because of the way it works (it actually adds a second volatile in its onstart event using data we can't really send externally)
+            // we use the battleengine's addvolatile for twoturnmove since it shouldn't throw any really problematic events
+            // we then remove the '' volatile that twoturnmove's onstart event adds
+            // then we manually add the second volatile
             console.log(line);
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.battle.sides[sindex].active[0].addVolatile('twoturnmove', this.battle.sides[1 - sindex].active[0]);
@@ -615,9 +665,9 @@ class InterfaceLayer {
             var nForme = arr[3];
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.battle.sides[sindex].active[0].formeChange(nForme, false);
-            console.log('Forme Change! ' + this.battle.sides[sindex].active[0].baseSpecies + ' changed to ' + arr[3]);
+            console.log('Forme Change! ' + this.battle.sides[sindex].active[0].species + ' changed to ' + arr[3]);
         }
-                // drag and switch are functionally identical
+        // drag and switch are functionally identical
         else if (tag == 'drag') {
             if (arr[2].startsWith(this.mySide)) {
                 var pName = arr[3].split(',')[0];
@@ -661,6 +711,7 @@ class InterfaceLayer {
                     var npoke = this.agent.assumePokemon(pName, pLev, pGen, this.battle.sides[1 - this.mySID]);
                     npoke.position = this.battle.sides[1 - this.mySID].pokemon.length;
                     this.battle.sides[1 - this.mySID].pokemon.push(npoke);
+                    this.battle.sides[1 - this.mySID].team.push(npoke);
                     this.runExternalSwitch(npoke, 0);
                 }
             }
@@ -677,12 +728,12 @@ class InterfaceLayer {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.battle.sides[sindex].active[0].clearBoosts();
         }
-            // Haze, and only Haze
+        // Haze, and only Haze
         else if (tag == '-clearallboost') {
             this.battle.sides[0].active[0].clearBoosts();
             this.battle.sides[1].active[0].clearBoosts();
         }
-            // Pretty much white herb, and only white herb
+        // Pretty much white herb, and only white herb
         else if (tag == '-restoreboost') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             var boosts = {};
@@ -693,8 +744,8 @@ class InterfaceLayer {
             }
             this.battle.sides[sindex].active[0].setBoost(boosts);
         }
-                // -detailchange is irrelevant here.  No ubers means no primal means no detailchanges
-                // -fieldstart refers to pseudoweather as well as terrain.  Because they are processed differently, we have to check whether it is a pseudoweather or a terrain when this line is processed
+        // -detailchange is irrelevant here.  No ubers means no primal means no detailchanges
+        // -fieldstart refers to pseudoweather as well as terrain.  Because they are processed differently, we have to check whether it is a pseudoweather or a terrain when this line is processed
         else if (tag == '-fieldstart') {
             console.log(line);
             var status = arr[2]
@@ -711,12 +762,12 @@ class InterfaceLayer {
             }
             this.runExternalFieldEnd(status);
         }
-                // transform to the best of my knowledge doesn't set off any weird things, so we can just call that directly
+        // transform to the best of my knowledge doesn't set off any weird things, so we can just call that directly
         else if (tag == '-transform') {
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.battle.sides[sindex].active[0].transformInto(this.battle.sides[1 - sindex].active[0], this.battle.sides[sindex].active[0]);
         }
-                // replace is for zoroark.  Sends the same data as drag and switch.
+        // replace is for zoroark.  Sends the same data as drag and switch.
         else if (tag == 'replace') {
             if (!arr[2].startsWith(this.mySide)) {
                 var found = false;
@@ -746,12 +797,24 @@ class InterfaceLayer {
                     var npoke = this.agent.assumePokemon(pName, pLev, pGen, this.battle.sides[1 - this.mySID]);
                     npoke.position = this.battle.sides[1 - this.mySID].pokemon.length;
                     this.battle.sides[1 - this.mySID].pokemon.push(npoke);
+                    this.battle.sides[1 - this.mySID].team.push(npoke);
                     this.runExternalSwitch(npoke, 0);
                 }
             }
         }
-                // teampreview Standards ou only, requires a response of |/team ######|1 (where ###### is the preferred order of pokemon, which we have to reorder in the model)
-                // poke is a part of team preview.  Has roughly the same information as switch. |poke|p1|details|hasitem
+        else if (boringTags.indexOf(tag) > -1) {
+            // Tags that don't tell us anything new
+        }
+        else if (tag == 'win') {
+            if (arr[2] == this.uname) {
+                console.log('I won!');
+            }
+            else {
+                console.log('I lost!');
+            }
+        }
+            // teampreview Standards ou only, requires a response of |/team ######|1 (where ###### is the preferred order of pokemon, which we have to reorder in the model)
+            // poke is a part of team preview.  Has roughly the same information as switch. |poke|p1|details|hasitem
         else {
         
             //    fs.appendFile('log.txt', line + '\n', function (err) { });
