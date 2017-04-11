@@ -228,7 +228,62 @@ class BattlePokemon {
 		this.baseHpPower = this.hpPower;
 
 		this.clearVolatile(true);
-	}
+    }
+
+    copy(battle, side) {
+        var circulars = {};
+    
+        circulars['battle'] = this.battle;
+        circulars['side'] = this.side;
+        circulars['statusData'] = this.statusData;
+        circulars['abilityData'] = this.abilityData;
+        circulars['itemData'] = this.itemData;
+        circulars['volatiles'] = this.volatiles;
+        circulars['lastAttackedBy'] = this.lastAttackedBy;
+
+        this.battle = null;
+        this.side = null;
+        this.statusData = null;
+        this.abilityData = null;
+        this.itemData = null;
+        this.volatiles = null;
+    
+        var nPoke = JSON.parse(JSON.stringify(this));
+        Object.setPrototypeOf(nPoke, this);
+    
+        for (var field in circulars) {
+            this[field] = circulars[field];
+        }
+    
+        for (var field of ['statusData', 'abilityData', 'itemData']) {
+            nPoke[field] = {};
+            if (this[field].target && this[field].target == this) {
+                this[field].target = null;
+                nPoke[field] = JSON.parse(JSON.stringify(this[field]));
+                nPoke[field].target = nPoke;
+                this[field].target = this;
+            }
+            else {
+                nPoke[field] = JSON.parse(JSON.stringify(this[field]));
+            }
+        }
+        nPoke.lastAttackedBy = null;
+        nPoke.volatiles = {};
+        for (var status in this.volatiles) {
+            if (this.volatiles[status].target && this.volatiles[status].target == this) {
+                this.volatiles[status].target = null;
+                nPoke.volatiles[status] = JSON.parse(JSON.stringify(this.volatiles[status]));
+                this.volatiles[status].target = this;
+                nPoke.volatiles[status].target = nSide;
+            }
+            else {
+                nPoke.volatiles[status] = JSON.parse(JSON.stringify(this.volatiles[status]));
+            }
+        }
+        nPoke.battle = battle;
+        nPoke.side = side;
+        return nPoke;
+    }
 
 	toString() {
 		let fullname = this.fullname;
@@ -1367,6 +1422,56 @@ class BattleSide {
 		}
 	}
 
+    copy(battle) {
+        var circulars = {};
+        
+        circulars['battle'] = this.battle;
+        circulars['pokemon'] = this.pokemon;
+        circulars['active'] = this.active;
+        circulars['foe'] = this.foe;
+        circulars['sideConditions'] = this.sideConditions;
+
+        this.battle = null;
+        this.pokemon = null;
+        this.active = null;
+        this.foe = null;
+        this.sideConditions = null;
+
+
+
+        var nSide = JSON.parse(JSON.stringify(this));
+        Object.setPrototypeOf(nSide, this);
+        nSide.getChoice = BattleSide.getChoice.bind(nSide);
+
+        for (var field in circulars) {
+            this[field] = circulars[field]; 
+        }
+
+        nSide.battle = battle;
+        nSide.foe = nSide.battle.sides[1 - nSide.n];
+        nSide.sideConditions = {};
+        for (var status in this.sideConditions) {
+            if (this.sideConditions[status].target && this.sideConditions[status].target == this) {
+                this.sideConditions[status].target = null;
+                nSide.sideConditions[status] = JSON.parse(JSON.stringify(this.sideConditions[status]));
+                this.sideConditions[status].target = this;
+                nSide.sideConditions[status].target = nSide;
+            }
+            else {
+                nSide.sideConditions[status] = JSON.parse(JSON.stringify(this.sideConditions[status]));
+            }
+        }
+
+        nSide.pokemon = [];
+        for (var i = 0; i < this.pokemon.length; i++) {
+            nSide.pokemon[i] = this.pokemon[i].copy(battle, nSide);
+        }
+        nSide.active = [];
+        nSide.active[0] = nSide.pokemon[0];
+        
+        return nSide;
+    }
+
 	static getChoice(side) {
 		if (side !== this && side !== true) return '';
 		return this.choiceData.choices.join(', ');
@@ -1990,6 +2095,39 @@ let Battle = (() => {
 			this.send = send;
 		}
 	};
+
+    // This is exclusively for simulation purposes.
+    Battle.prototype.copy = function() {
+
+        var circulars = {};
+        circulars.sides = this.sides;
+        circulars.p1 = this.p1;
+        circulars.p2 = this.p2;
+        circulars.upRoom = this.upRoom;
+        
+        this.sides = [null, null];
+        this.p1 = null;
+        this.p2 = null;
+        this.upRoom = null;
+
+        var nBattle = JSON.parse(JSON.stringify(this));
+        Object.setPrototypeOf(nBattle, this);
+
+        this.sides = circulars.sides;
+        this.p1 = circulars.p1;
+        this.p2 = circulars.p2;
+        this.upRoom = circulars.upRoom;
+
+        nBattle.p1 = this.p1.copy(nBattle);
+        nBattle.p2 = this.p2.copy(nBattle);
+        nBattle.p1.foe = nBattle.p2;
+        nBattle.p2.foe = nBattle.p1;
+        nBattle.sides[0] = nBattle.p1;
+        nBattle.sides[1] = nBattle.p2;
+        nBattle.upRoom = this.upRoom;
+        
+        return nBattle;
+    };
 
 	Battle.prototype.turn = 0;
 	Battle.prototype.p1 = null;

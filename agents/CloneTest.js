@@ -84,59 +84,24 @@ class MultiTLAgent {
     }
 
     decide(gameState, options, mySide) {
+        var nState = gameState.copy();
 
-        var sidea = gameState.sides[0];
-        //console.log(gameState.sides[0].clearChoice);
-        //console.log(sidea.clearChoice);
-
-        // It is important to start by making a deep copy of gameState.  We want to avoid accidentally modifying the gamestate.
-        var nstate = gameState.copy();
-        //console.log(gameState.sides[0].clearChoice);
-        //console.log(nstate.sides[0].clearChoice);
-        // The receive function is going to need access to this variable, so it makes sense to set it as a class member.
-        this.mySID = mySide.n;
-        this.mySide = mySide.id;
-        var choices = Object.keys(options);
-        
-
-        function battleSend(type, data) {
-            if (Array.isArray(data)) data = data.join("\n");
-            this.upRoom.receive(this.upRoom.id + "\n" + type + "\n" + data, this);
-        }
-
-        nstate.upRoom = this;
-        nstate.send = battleSend;
-        nstate.sides[0].clearChoice();
-        nstate.sides[1].clearChoice();
-        nstate.start();
-        // The pokemon equivalent of pass is a move called splash.  It is wonderful.
-        this.teachSplash(nstate.sides[1 - this.mySID].active[0]);
-        var states = [];
-        // Next we simulate the outcome of all our possible actions, while assuming our opponent does nothing each turn (uses splash, but it's kind of the same thing).
-        // The gamestate receives choice data as an array with 4 items
-        // battle id (we can ignore this), type (we use 'choose' to indicate a choice is made), player (formatted as p1 or p2), choice
-        for (var choice in options) {
-            console.log(choice);
-            var cstate = nstate.copy();
-            cstate.sides[0].clearChoice();
-            cstate.sides[1].clearChoice();
-            cstate.receive(['', 'choose', 'p' + (1 - this.mySID + 1), 'move splash']);
-            cstate.receive(['', 'choose', 'p' + (this.mySID + 1), choice]);
-            // A variable to track if the state is an end state (an end state here is defined as an event wherein the opponent is forced to switch).
-            cstate.isTerminal = false;
-            states.push(cstate);
-        }
-        console.log(nstate.log);
+        nState.weather = "sun";
+        console.log(nState.weather);
+        console.log(gameState.weather);
+        nState.sides[0].n = 3;
+        console.log(nState.p1.n);
+        console.log(gameState.p1.n);
+        console.log(gameState.sides[mySide.n].active[0]);
     }
 
-    receive(data, state) {
+    receive(data) {
         var lines = data.split('\n');
         if (lines[1] == 'request') {
-            if (lines[2] == this.mySide) {
-                //console.log(lines[4]);
+            if (lines[2] == 'p' + (this.mySID + 1)) {
             }
-            else if (lines[2] == 'p2') {
-                console.log(state.sides[1].active[0].hp);
+            else {
+                console.log(lines[3]);
             }
         }
     }
