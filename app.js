@@ -40,8 +40,8 @@ if (online) {
     var attemptLogin = true;
     //  The agent will attempt to initiate this many battles
     var battleCount = 2;
-    var username = 'polytestai';
-    var password = 'polyai';
+    var username = '';
+    var password = '';
     // This is where you would put the formats that you are interested in having your AI participate in.
     var formats = ['randombattle', 'randommirror'];
     

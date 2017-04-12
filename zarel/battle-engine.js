@@ -230,7 +230,8 @@ class BattlePokemon {
 		this.clearVolatile(true);
     }
 
-    copy(battle, side) {
+    copy(nBattle, nSide) {
+
         var circulars = {};
     
         circulars['battle'] = this.battle;
@@ -247,7 +248,8 @@ class BattlePokemon {
         this.abilityData = null;
         this.itemData = null;
         this.volatiles = null;
-    
+        this.lastAttackedBy = null;
+
         var nPoke = JSON.parse(JSON.stringify(this));
         Object.setPrototypeOf(nPoke, this);
     
@@ -255,34 +257,70 @@ class BattlePokemon {
             this[field] = circulars[field];
         }
     
+    
         for (var field of ['statusData', 'abilityData', 'itemData']) {
             nPoke[field] = {};
+            var target = null;
+            var source = null;
             if (this[field].target && this[field].target == this) {
+                target = this[field].target;
                 this[field].target = null;
-                nPoke[field] = JSON.parse(JSON.stringify(this[field]));
-                nPoke[field].target = nPoke;
-                this[field].target = this;
             }
-            else {
-                nPoke[field] = JSON.parse(JSON.stringify(this[field]));
+            if (this[field].source) {
+                source = this[field].source;
+                this[field].source = null;
+            }
+            nPoke[field] = JSON.parse(JSON.stringify(this[field]));
+            if (target != null) {
+                nPoke[field].target = nPoke;
+                this[field].target = target;
+            }
+            if (source != null) {
+                nPoke[field].source = {};
+                this[field].source = source;
             }
         }
         nPoke.lastAttackedBy = null;
+        nPoke.battle = nBattle;
+        nPoke.side = nSide;
         nPoke.volatiles = {};
         for (var status in this.volatiles) {
-            if (this.volatiles[status].target && this.volatiles[status].target == this) {
+            var target = null;
+            var source = null;
+            if (this.volatiles[status].target) {
+                target = this.volatiles[status].target;
                 this.volatiles[status].target = null;
-                nPoke.volatiles[status] = JSON.parse(JSON.stringify(this.volatiles[status]));
-                this.volatiles[status].target = this;
-                nPoke.volatiles[status].target = nSide;
             }
-            else {
-                nPoke.volatiles[status] = JSON.parse(JSON.stringify(this.volatiles[status]));
+            if (this.volatiles[status].source) {
+                source = this.volatiles[status].source;
+                this.volatiles[status].source = null;
+            }
+            nPoke.volatiles[status] = JSON.parse(JSON.stringify(this.volatiles[status]));
+            if (target != null) {
+                this.volatiles[status].target = target;
+                nPoke.volatiles[status].target = nPoke;
+            }
+            // It sucks, but we have no real way of getting this into our copy.  To compensate, im totally going to do a hack.
+            if (source != null) {
+                this.volatiles[status].source = source;
+                nPoke.volatiles[status].source = {};
             }
         }
-        nPoke.battle = battle;
-        nPoke.side = side;
+        
         return nPoke;
+    }
+
+    postCopyRepair() {
+        for (var field of ['statusData', 'abilityData', 'itemData']) {
+            if (this[field].source != null) {
+                this[field].source = this.side.foe.active[0];
+            }
+        }
+        for (var status in this.volatiles) {
+            if (this.volatiles[status].source != null) {
+                this.volatiles[status].source = this.side.foe.active[0];
+            }
+        }
     }
 
 	toString() {
@@ -480,7 +518,7 @@ class BattlePokemon {
 		return !!((this.battle.gen >= 5 && !this.isActive) || this.volatiles['gastroacid']);
 	}
 	ignoringItem() {
-		return !!((this.battle.gen >= 5 && !this.isActive) || this.hasAbility('klutz') || this.volatiles['embargo'] || this.battle.pseudoWeather['magicroom']);
+		return !!((this.battle.gen >= 5 && !this.isActive) || this.hasAbility('klutz') || this.volatiles['embargo'] || (this.battle.pseudoWeather && this.battle.pseudoWeather['magicroom']));
 	}
 	deductPP(move, amount, source) {
 		move = this.battle.getMove(move);
@@ -1422,7 +1460,7 @@ class BattleSide {
 		}
 	}
 
-    copy(battle) {
+    copy(nBattle) {
         var circulars = {};
         
         circulars['battle'] = this.battle;
@@ -1437,8 +1475,6 @@ class BattleSide {
         this.foe = null;
         this.sideConditions = null;
 
-
-
         var nSide = JSON.parse(JSON.stringify(this));
         Object.setPrototypeOf(nSide, this);
         nSide.getChoice = BattleSide.getChoice.bind(nSide);
@@ -1447,29 +1483,50 @@ class BattleSide {
             this[field] = circulars[field]; 
         }
 
-        nSide.battle = battle;
+        nSide.battle = nBattle;
         nSide.foe = nSide.battle.sides[1 - nSide.n];
         nSide.sideConditions = {};
         for (var status in this.sideConditions) {
+            var target = null;
+            var source = null;
             if (this.sideConditions[status].target && this.sideConditions[status].target == this) {
+                target = this.sideConditions[status].target;
                 this.sideConditions[status].target = null;
-                nSide.sideConditions[status] = JSON.parse(JSON.stringify(this.sideConditions[status]));
-                this.sideConditions[status].target = this;
+            }
+            if (this.sideConditions[status].source) {
+                source = this.sideConditions[status].source;
+                this.sideConditions[status].source = null;
+            }
+            nSide.sideConditions[status] = JSON.parse(JSON.stringify(this.sideConditions[status]));
+            if (target != null) {
+                this.sideConditions[status].target = target;
                 nSide.sideConditions[status].target = nSide;
             }
-            else {
-                nSide.sideConditions[status] = JSON.parse(JSON.stringify(this.sideConditions[status]));
+            if (source != null) {
+                this.sideConditions[status].source = source;
+                nSide.sideConditions[status].source = {};
             }
         }
 
         nSide.pokemon = [];
         for (var i = 0; i < this.pokemon.length; i++) {
-            nSide.pokemon[i] = this.pokemon[i].copy(battle, nSide);
+            nSide.pokemon[i] = this.pokemon[i].copy(nBattle, nSide);
         }
         nSide.active = [];
         nSide.active[0] = nSide.pokemon[0];
         
         return nSide;
+    }
+
+    postCopyRepair() {
+        for (var status in this.sideConditions) {
+            if (this.sideConditions[status].source != null) {
+                this.sideConditions[status].source = this.foe.active[0];
+            }
+        }
+        for (var i = 0; i < this.pokemon.length; i++) {
+            this.pokemon[i].postCopyRepair();
+        }
     }
 
 	static getChoice(side) {
@@ -2104,11 +2161,16 @@ let Battle = (() => {
         circulars.p1 = this.p1;
         circulars.p2 = this.p2;
         circulars.upRoom = this.upRoom;
+        circulars.psuedoWeather = this.pseudoWeather;
+        circulars.weatherData = this.weatherData;
         
         this.sides = [null, null];
         this.p1 = null;
         this.p2 = null;
         this.upRoom = null;
+        this.pseudoWeather = null;
+        this.weatherData = null;
+
 
         var nBattle = JSON.parse(JSON.stringify(this));
         Object.setPrototypeOf(nBattle, this);
@@ -2124,7 +2186,45 @@ let Battle = (() => {
         nBattle.p2.foe = nBattle.p1;
         nBattle.sides[0] = nBattle.p1;
         nBattle.sides[1] = nBattle.p2;
+        nBattle.p1.postCopyRepair();
+        nBattle.p2.postCopyRepair();
         nBattle.upRoom = this.upRoom;
+        nBattle.pseudoWeather = {};
+        nBattle.weatherData = {};
+
+        for (var status in this.pseudoWeather) {
+            var target = null;
+            var source = null;
+            if (this.pseudoWeather[status].target) {
+                target = this.pseudoWeather[status].target;
+                this.pseudoWeather[status].target = null;
+            }
+            if (this.pseudoWeather[status].source) {
+                source = this.pseudoWeather[status].source;
+                this.pseudoWeather[status].source = null;
+            }
+            nPoke.pseudoWeather[status] = JSON.parse(JSON.stringify(this.pseudoWeather[status]));
+            if (target != null) {
+                this.pseudoWeather[status].target = target;
+                nBattle.pseudoWeather[status].target = nBattle;
+            }
+            // It sucks, but we have no real way of getting this into our copy.  But I'm not 100% sure it matters.
+            if (source != null) {
+                this.pseudoWeather[status].source = source;
+            }
+        }
+        var weatherSource = null;
+        if (this.weatherData && this.weatherData.source) {
+            weatherSource = this.weatherData.source;
+            this.weatherData.source = null;    
+        }
+        if (this.weatherData) {
+            nBattle.weatherData = JSON.parse(JSON.stringify(this.weatherData));
+            nBattle.weatherData.duration = this.weatherData.duration;
+        }
+        if (weatherSource != null) {
+            this.weatherData.source = weatherSource;    
+        }
         
         return nBattle;
     };

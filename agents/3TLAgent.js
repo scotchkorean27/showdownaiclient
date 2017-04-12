@@ -19,12 +19,12 @@ class MultiTLAgent {
     }
 
     parseRequestData(request) {
-        var requestData = JSON.parse(arr[2]);
+        var requestData = JSON.parse(request);
         var cTurnOptions = {};
         if (requestData['active']) {
             for (var i = 0; i < requestData['active'][0]['moves'].length; i++) {
                 if (requestData['active'][0]['moves'][i]['disabled'] == false && requestData['active'][0]['moves'][i].pp > 0) {
-                    this.cTurnOptions['move ' + requestData['active'][0]['moves'][i].id] = requestData['active'][0]['moves'][i];
+                    cTurnOptions['move ' + requestData['active'][0]['moves'][i].id] = requestData['active'][0]['moves'][i];
                 }
             }
         }
@@ -34,12 +34,12 @@ class MultiTLAgent {
             this.zoroarkActive = requestData['side']['pokemon'][0].details.startsWith('Zoroark');
             for (var i = 1; i < requestData['side']['pokemon'].length; i++) {
                 if (requestData['side']['pokemon'][i].condition.indexOf('fnt') == -1) {
-                    this.cTurnOptions['switch ' + (i + 1)] = requestData['side']['pokemon'][i];
+                    cTurnOptions['switch ' + (i + 1)] = requestData['side']['pokemon'][i];
                 }
             }
         }
-        for (var option in this.cTurnOptions) {
-            this.cTurnOptions[option].choice = option;
+        for (var option in cTurnOptions) {
+            cTurnOptions[option].choice = option;
         }
         return cTurnOptions;
     }
@@ -103,6 +103,7 @@ class MultiTLAgent {
             if (Array.isArray(data)) data = data.join("\n");
             this.upRoom.receive(this.upRoom.id + "\n" + type + "\n" + data, this);
         }
+        console.log();
 
         nstate.upRoom = this;
         nstate.send = battleSend;
@@ -116,7 +117,6 @@ class MultiTLAgent {
         // The gamestate receives choice data as an array with 4 items
         // battle id (we can ignore this), type (we use 'choose' to indicate a choice is made), player (formatted as p1 or p2), choice
         for (var choice in options) {
-            console.log(choice);
             var cstate = nstate.copy();
             cstate.sides[0].clearChoice();
             cstate.sides[1].clearChoice();
@@ -124,19 +124,45 @@ class MultiTLAgent {
             cstate.receive(['', 'choose', 'p' + (this.mySID + 1), choice]);
             // A variable to track if the state is an end state (an end state here is defined as an event wherein the opponent is forced to switch).
             cstate.isTerminal = false;
+            cstate.baseMove = choice;
             states.push(cstate);
         }
-        console.log(nstate.log);
+        var i = 0;
+        while (i < 200) {
+            var cState = states.shift();
+            if (!cState) {
+                return this.fetch_random_key(options);
+            }
+            if (cState.isTerminal) {
+                return cState.baseMove;
+            }
+            for (var choice in cState.myTurnOptions) {
+                if (choice.startsWith('move')) {
+                    var nstate = cState.copy();
+                    nstate.sides[0].clearChoice();
+                    nstate.sides[1].clearChoice();
+                    nstate.receive(['', 'choose', 'p' + (1 - this.mySID + 1), 'move splash']);
+                    nstate.receive(['', 'choose', 'p' + (this.mySID + 1), choice]);
+                    states.push(nstate);
+                }
+            }
+            i++;
+            console.log(i);
+        }
+        return this.fetch_random_key(options);
     }
 
     receive(data, state) {
         var lines = data.split('\n');
         if (lines[1] == 'request') {
             if (lines[2] == this.mySide) {
-                //console.log(lines[4]);
+                state.myTurnOptions = this.parseRequestData(lines[4]);
             }
-            else if (lines[2] == 'p2') {
-                console.log(state.sides[1].active[0].hp);
+            else {
+                var requestData = JSON.parse(lines[4]);
+                if (!requestData['active']) {
+                    state.isTerminal = true;
+                }
             }
         }
     }
