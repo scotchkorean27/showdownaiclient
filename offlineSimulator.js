@@ -154,6 +154,12 @@ class Battle {
                     }
                     this.gameOver = true;
                     // console.log(this.battle.log);
+                    for (var i = 0; i < this.battle.log.length; i++) {
+                        if (this.battle.log[i] == '|split') {
+                            i += 4;
+                        }
+                        console.log(this.battle.log[i]);
+                    }
                     break;
 
                 case 'sideupdate': {

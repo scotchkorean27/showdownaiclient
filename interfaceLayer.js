@@ -171,7 +171,7 @@ class InterfaceLayer {
         if (toId(ability) != pokemon.ability) {
             ability = this.battle.getAbility(toId(ability));
             pokemon.ability = ability.id;
-            pokemon.abilityData = { id: ability.id, target: pokemon };
+            pokemon.abilityData = { id: ability.id };
         }
     }
 
@@ -393,14 +393,14 @@ class InterfaceLayer {
                     var npoke = this.agent.assumePokemon(pName, pLev, pGen, this.battle.sides[1 - this.mySID]);
                     npoke.position = this.battle.sides[1 - this.mySID].pokemon.length;
                     this.battle.sides[1 - this.mySID].pokemon.push(npoke);
-                    this.battle.sides[1 - this.mySID].team.push(npoke);
                     this.runExternalSwitch(npoke, 0);
                 }
             }
         }
         else if (tag == 'turn') {
+            console.log(line);
             // Because we never invoke the residual event (since that would set off a lot of other events), we need to manually update turn counters.
-            if (this.battle.weatherData.duration) {
+            if (this.battle.weatherData && this.battle.weatherData.duration) {
                 this.battle.weatherData.duration--;
             }
             if (this.battle.terrainData.duration) {
@@ -711,7 +711,6 @@ class InterfaceLayer {
                     var npoke = this.agent.assumePokemon(pName, pLev, pGen, this.battle.sides[1 - this.mySID]);
                     npoke.position = this.battle.sides[1 - this.mySID].pokemon.length;
                     this.battle.sides[1 - this.mySID].pokemon.push(npoke);
-                    this.battle.sides[1 - this.mySID].team.push(npoke);
                     this.runExternalSwitch(npoke, 0);
                 }
             }
@@ -797,7 +796,6 @@ class InterfaceLayer {
                     var npoke = this.agent.assumePokemon(pName, pLev, pGen, this.battle.sides[1 - this.mySID]);
                     npoke.position = this.battle.sides[1 - this.mySID].pokemon.length;
                     this.battle.sides[1 - this.mySID].pokemon.push(npoke);
-                    this.battle.sides[1 - this.mySID].team.push(npoke);
                     this.runExternalSwitch(npoke, 0);
                 }
             }
@@ -821,7 +819,6 @@ class InterfaceLayer {
             console.log(line);
             
         }
-        
     }
     process(text) {
         // console.log(text);
