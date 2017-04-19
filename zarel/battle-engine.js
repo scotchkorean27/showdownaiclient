@@ -241,6 +241,11 @@ class BattlePokemon {
         circulars['itemData'] = this.itemData;
         circulars['volatiles'] = this.volatiles;
         circulars['lastAttackedBy'] = this.lastAttackedBy;
+    
+        var shallowCopy = {};
+        shallowCopy['template'] = this.template;
+        shallowCopy['baseTemplate'] = this.template;
+        shallowCopy['baseMoveset'] = this.baseMoveset;
 
         this.battle = null;
         this.side = null;
@@ -249,12 +254,26 @@ class BattlePokemon {
         this.itemData = null;
         this.volatiles = null;
         this.lastAttackedBy = null;
+        this.template = null;
+        this.baseTemplate = null;
+        this.baseMoveset = null;
 
-        var nPoke = JSON.parse(JSON.stringify(this));
-        Object.setPrototypeOf(nPoke, this);
+        var nPoke = Object.create(Object.getPrototypeOf(this));
+        Object.assign(nPoke, this);
+    
+        for (var field in this) {
+            if (typeof (this[field]) == 'object') {
+                nPoke[field] = JSON.parse(JSON.stringify(this[field]));
+            }
+        }
     
         for (var field in circulars) {
             this[field] = circulars[field];
+        }
+    
+        for (var field in shallowCopy) {
+            this[field] = shallowCopy[field];
+            nPoke[field] = shallowCopy[field];
         }
     
     
@@ -1468,16 +1487,17 @@ class BattleSide {
         circulars['active'] = this.active;
         circulars['foe'] = this.foe;
         circulars['sideConditions'] = this.sideConditions;
+        circulars['choiceData'] = this.choiceData;
 
         this.battle = null;
         this.pokemon = null;
         this.active = null;
         this.foe = null;
         this.sideConditions = null;
+        this.choiceData = null;
 
-        var nSide = JSON.parse(JSON.stringify(this));
-        Object.setPrototypeOf(nSide, this);
-        nSide.getChoice = BattleSide.getChoice.bind(nSide);
+        var nSide = Object.create(Object.getPrototypeOf(this));
+        Object.assign(nSide, this);
 
         for (var field in circulars) {
             this[field] = circulars[field]; 
@@ -1507,6 +1527,7 @@ class BattleSide {
                 nSide.sideConditions[status].source = {};
             }
         }
+        
 
         nSide.pokemon = [];
         for (var i = 0; i < this.pokemon.length; i++) {
@@ -1514,7 +1535,9 @@ class BattleSide {
         }
         nSide.active = [];
         nSide.active[0] = nSide.pokemon[0];
-        
+        nSide.choiceData = {};
+        nSide.clearChoice();
+        nSide.getChoice = BattleSide.getChoice.bind(nSide);
         return nSide;
     }
 
@@ -2153,32 +2176,42 @@ let Battle = (() => {
 		}
 	};
 
-    // This is exclusively for simulation purposes.
-    Battle.prototype.copy = function() {
+    Battle.prototype.advanceGame = function(choice1, choice2) {
+        cstate.receive(['', 'choose', 'p1', choice1]);
+        cstate.receive(['', 'choose', 'p2', choice2]);
+    };
 
-        var circulars = {};
-        circulars.sides = this.sides;
-        circulars.p1 = this.p1;
-        circulars.p2 = this.p2;
-        circulars.upRoom = this.upRoom;
-        circulars.psuedoWeather = this.pseudoWeather;
-        circulars.weatherData = this.weatherData;
-        
-        this.sides = [null, null];
-        this.p1 = null;
-        this.p2 = null;
-        this.upRoom = null;
-        this.pseudoWeather = null;
-        this.weatherData = null;
+    Battle.prototype.loadState = function(state) {
+        Battle.prototype.turn = 0;
+	    Battle.prototype.p1 = null;
+	    Battle.prototype.p2 = null;
+	    Battle.prototype.lastUpdate = 0;
+	    Battle.prototype.weather = '';
+	    Battle.prototype.terrain = '';
+	    Battle.prototype.ended = false;
+	    Battle.prototype.started = false;
+	    Battle.prototype.active = false;
+	    Battle.prototype.eventDepth = 0;
+	    Battle.prototype.lastMove = '';
+	    Battle.prototype.activeMove = null;
+	    Battle.prototype.activePokemon = null;
+	    Battle.prototype.activeTarget = null;
+	    Battle.prototype.midTurn = false;
+	    Battle.prototype.currentRequest = '';
+	    Battle.prototype.currentRequestDetails = '';
+	    Battle.prototype.rqid = 0;
+	    Battle.prototype.lastMoveLine = 0;
+	    Battle.prototype.reportPercentages = false;
+	    Battle.prototype.supportCancel = false;
+	    Battle.prototype.events = null;
+        for (var field in state) {
+            this[field] = state[field];
+        }
+    };
 
-
-        var nBattle = JSON.parse(JSON.stringify(this));
-        Object.setPrototypeOf(nBattle, this);
-
-        this.sides = circulars.sides;
-        this.p1 = circulars.p1;
-        this.p2 = circulars.p2;
-        this.upRoom = circulars.upRoom;
+    // TODO: Implement this
+    Battle.prototype.extractState = function() {
+        var nBattle = {};
 
         nBattle.p1 = this.p1.copy(nBattle);
         nBattle.p2 = this.p2.copy(nBattle);
@@ -2191,6 +2224,8 @@ let Battle = (() => {
         nBattle.upRoom = this.upRoom;
         nBattle.pseudoWeather = {};
         nBattle.weatherData = {};
+        nBattle.log = [];
+
 
         for (var status in this.pseudoWeather) {
             var target = null;
@@ -2203,7 +2238,7 @@ let Battle = (() => {
                 source = this.pseudoWeather[status].source;
                 this.pseudoWeather[status].source = null;
             }
-            nPoke.pseudoWeather[status] = JSON.parse(JSON.stringify(this.pseudoWeather[status]));
+            nBattle.pseudoWeather[status] = JSON.parse(JSON.stringify(this.pseudoWeather[status]));
             if (target != null) {
                 this.pseudoWeather[status].target = target;
                 nBattle.pseudoWeather[status].target = nBattle;
@@ -2228,6 +2263,86 @@ let Battle = (() => {
         
         return nBattle;
     };
+
+    // This is exclusively for simulation purposes.
+    Battle.prototype.copy = function() {
+
+        var circulars = {};
+        circulars['sides'] = this.sides;
+        circulars['p1'] = this.p1;
+        circulars['p2'] = this.p2;
+        circulars['upRoom'] = this.upRoom;
+        circulars['pseudoWeather'] = this.pseudoWeather;
+        circulars['weatherData'] = this.weatherData;
+        circulars['log'] = this.log;
+        
+        this.sides = [null, null];
+        this.p1 = null;
+        this.p2 = null;
+        this.upRoom = null;
+        this.pseudoWeather = null;
+        this.weatherData = null;
+        this.log = null;
+        
+        var nBattle = Object.create(Object.getPrototypeOf(this));
+        Object.assign(nBattle, this);
+
+        for (var key in circulars) {
+            this[key] = circulars[key];
+        }
+
+        nBattle.p1 = this.p1.copy(nBattle);
+        nBattle.p2 = this.p2.copy(nBattle);
+        nBattle.p1.foe = nBattle.p2;
+        nBattle.p2.foe = nBattle.p1;
+        nBattle.sides[0] = nBattle.p1;
+        nBattle.sides[1] = nBattle.p2;
+        nBattle.p1.postCopyRepair();
+        nBattle.p2.postCopyRepair();
+        nBattle.upRoom = this.upRoom;
+        nBattle.pseudoWeather = {};
+        nBattle.weatherData = {};
+        nBattle.log = [];
+
+
+        for (var status in this.pseudoWeather) {
+            var target = null;
+            var source = null;
+            if (this.pseudoWeather[status].target) {
+                target = this.pseudoWeather[status].target;
+                this.pseudoWeather[status].target = null;
+            }
+            if (this.pseudoWeather[status].source) {
+                source = this.pseudoWeather[status].source;
+                this.pseudoWeather[status].source = null;
+            }
+            nBattle.pseudoWeather[status] = JSON.parse(JSON.stringify(this.pseudoWeather[status]));
+            if (target != null) {
+                this.pseudoWeather[status].target = target;
+                nBattle.pseudoWeather[status].target = nBattle;
+            }
+            // It sucks, but we have no real way of getting this into our copy.  But I'm not 100% sure it matters.
+            if (source != null) {
+                this.pseudoWeather[status].source = source;
+            }
+        }
+        var weatherSource = null;
+        if (this.weatherData && this.weatherData.source) {
+            weatherSource = this.weatherData.source;
+            this.weatherData.source = null;    
+        }
+        if (this.weatherData) {
+            nBattle.weatherData = JSON.parse(JSON.stringify(this.weatherData));
+            nBattle.weatherData.duration = this.weatherData.duration;
+        }
+        if (weatherSource != null) {
+            this.weatherData.source = weatherSource;    
+        }
+        
+        return nBattle;
+    };
+
+    Battle
 
 	Battle.prototype.turn = 0;
 	Battle.prototype.p1 = null;

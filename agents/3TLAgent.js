@@ -103,7 +103,6 @@ class MultiTLAgent {
             if (Array.isArray(data)) data = data.join("\n");
             this.upRoom.receive(this.upRoom.id + "\n" + type + "\n" + data, this);
         }
-        console.log();
 
         nstate.upRoom = this;
         nstate.send = battleSend;
@@ -128,9 +127,13 @@ class MultiTLAgent {
             states.push(cstate);
         }
         var i = 0;
+        
+        //console.log(gameState);
+        
         while (i < 200) {
             var cState = states.shift();
             if (!cState) {
+                console.log('FAILURE!');
                 return this.fetch_random_key(options);
             }
             if (cState.isTerminal) {
@@ -149,6 +152,7 @@ class MultiTLAgent {
             i++;
             console.log(i);
         }
+        
         return this.fetch_random_key(options);
     }
 
@@ -160,7 +164,7 @@ class MultiTLAgent {
             }
             else {
                 var requestData = JSON.parse(lines[4]);
-                if (!requestData['active']) {
+                if (!requestData['active'] || state.ended) {
                     state.isTerminal = true;
                 }
             }
