@@ -36,6 +36,7 @@
     <Compile Include="agents\OTLAgent.js" />
     <Compile Include="agents\RandomAgent.js" />
     <Compile Include="app.js" />
+    <Compile Include="clone.js" />
     <Compile Include="InterfaceLayer.js" />
     <Compile Include="OfflineGame.js" />
     <Compile Include="OfflineSimulator.js" />

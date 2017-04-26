@@ -1,12 +1,31 @@
 ﻿'use strict';
 
 var Pokemon = require('../zarel/battle-engine').BattlePokemon;
-
+var clone = require('../clone')
+var BattleSide = require('../zarel/battle-engine').BattleSide;
 
 // Sometimes you want to simulate things in the game that are more complicated than just damage.  For these things, we can advance our fun little forward model.
 // This agent shows a way to advance the forward model.
 class MultiTLAgent {
     constructor() { }
+
+    cloneBattle(state) {
+        var nBattle = clone(state);
+        nBattle.p1.getChoice = BattleSide.getChoice.bind(nBattle.p1);
+        nBattle.p2.getChoice = BattleSide.getChoice.bind(nBattle.p2);
+        nBattle.p1.clearChoice();
+        nBattle.p2.clearChoice();
+        return nBattle;
+    }
+
+    getOptions(state, player) {
+        if (typeof (player) == 'string' && player.startsWith('p')) {
+            player = parseInt(player.substring(1)) - 1;
+        }
+        let activeData = state.sides[player].active.map(pokemon => pokemon && pokemon.getRequestData());
+        var p1request = { active: activeData, side: state.sides[player].getData(), rqid: state.rqid };
+        return this.parseRequestData(p1request);
+    }
 
     fetch_random_key(obj) {
         var temp_key, keys = [];
@@ -18,8 +37,10 @@ class MultiTLAgent {
         return keys[Math.floor(Math.random() * keys.length)];
     }
 
-    parseRequestData(request) {
-        var requestData = JSON.parse(request);
+
+
+    parseRequestData(requestData) {
+        if (typeof (requestData) == 'string') { requestData = JSON.parse(request); }
         var cTurnOptions = {};
         if (requestData['active']) {
             for (var i = 0; i < requestData['active'][0]['moves'].length; i++) {
@@ -31,7 +52,6 @@ class MultiTLAgent {
         if (requestData['side'] && !(requestData['active'] && requestData['active'][0]['trapped'])) {
             // Basically, if we switch to zoroark, the request data will reflect it, but the switch event data will not.
             // Therefore, if a switch event happens on this turn, we override the swapped pokemon with zoroark
-            this.zoroarkActive = requestData['side']['pokemon'][0].details.startsWith('Zoroark');
             for (var i = 1; i < requestData['side']['pokemon'].length; i++) {
                 if (requestData['side']['pokemon'][i].condition.indexOf('fnt') == -1) {
                     cTurnOptions['switch ' + (i + 1)] = requestData['side']['pokemon'][i];
@@ -84,30 +104,23 @@ class MultiTLAgent {
     }
 
     decide(gameState, options, mySide) {
-
-        var sidea = gameState.sides[0];
-        //console.log(gameState.sides[0].clearChoice);
-        //console.log(sidea.clearChoice);
-
         // It is important to start by making a deep copy of gameState.  We want to avoid accidentally modifying the gamestate.
-        var nstate = gameState.copy();
+        var nstate = this.cloneBattle(gameState);
+        
         //console.log(gameState.sides[0].clearChoice);
         //console.log(nstate.sides[0].clearChoice);
         // The receive function is going to need access to this variable, so it makes sense to set it as a class member.
         this.mySID = mySide.n;
         this.mySide = mySide.id;
         var choices = Object.keys(options);
-        
 
         function battleSend(type, data) {
-            if (Array.isArray(data)) data = data.join("\n");
-            this.upRoom.receive(this.upRoom.id + "\n" + type + "\n" + data, this);
+            if (this.sides[1].active[0].hp == 0) {
+                this.isTerminal = true;
+            }
         }
-
-        nstate.upRoom = this;
+        
         nstate.send = battleSend;
-        nstate.sides[0].clearChoice();
-        nstate.sides[1].clearChoice();
         nstate.start();
         // The pokemon equivalent of pass is a move called splash.  It is wonderful.
         this.teachSplash(nstate.sides[1 - this.mySID].active[0]);
@@ -116,9 +129,8 @@ class MultiTLAgent {
         // The gamestate receives choice data as an array with 4 items
         // battle id (we can ignore this), type (we use 'choose' to indicate a choice is made), player (formatted as p1 or p2), choice
         for (var choice in options) {
-            var cstate = nstate.copy();
-            cstate.sides[0].clearChoice();
-            cstate.sides[1].clearChoice();
+            var cstate = this.cloneBattle(nstate);
+            
             cstate.receive(['', 'choose', 'p' + (1 - this.mySID + 1), 'move splash']);
             cstate.receive(['', 'choose', 'p' + (this.mySID + 1), choice]);
             // A variable to track if the state is an end state (an end state here is defined as an event wherein the opponent is forced to switch).
@@ -126,6 +138,9 @@ class MultiTLAgent {
             cstate.baseMove = choice;
             states.push(cstate);
         }
+
+        // console.log(nothing);
+        
         var i = 0;
         
         //console.log(gameState);
@@ -139,18 +154,17 @@ class MultiTLAgent {
             if (cState.isTerminal) {
                 return cState.baseMove;
             }
-            for (var choice in cState.myTurnOptions) {
+            var myTurnOptions = this.getOptions(cState, mySide.id);
+            for (var choice in myTurnOptions) {
                 if (choice.startsWith('move')) {
-                    var nstate = cState.copy();
-                    nstate.sides[0].clearChoice();
-                    nstate.sides[1].clearChoice();
+                    var nstate = this.cloneBattle(cState);
                     nstate.receive(['', 'choose', 'p' + (1 - this.mySID + 1), 'move splash']);
                     nstate.receive(['', 'choose', 'p' + (this.mySID + 1), choice]);
                     states.push(nstate);
                 }
             }
             i++;
-            console.log(i);
+            console.log(i + ": " + cState.sides[1 - this.mySID].active[0].hp + ", " + cState.sides[1].currentRequest);
         }
         
         return this.fetch_random_key(options);
@@ -169,6 +183,9 @@ class MultiTLAgent {
                 }
             }
         }
+        console.log(state.sides[0].active[0].name);
+        console.log(state.sides[1].active[0].name);
+        console.log(state.sides[1].active[0].hp);
     }
 
     assumePokemon(pname, plevel, pgender, side) {
