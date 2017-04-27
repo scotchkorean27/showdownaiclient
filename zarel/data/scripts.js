@@ -2112,7 +2112,7 @@ exports.BattleScripts = {
 
 		// For Monotype
 		let isMonotype = this.format === 'monotyperandombattle';
-		let typePool = Object.keys(this.data.TypeChart);
+		let typePool = Object.keys(Tools.data.TypeChart);
 		let type = typePool[this.random(typePool.length)];
 
 		let pokemonPool = [];

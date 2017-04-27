@@ -24,7 +24,15 @@ exports.Formats = [
 		challengeShow: false,
 		rated: false,
 		ruleset: ['PotD', 'Pokemon', 'Sleep Clause Mod', 'HP Percentage Mod', 'Cancel Mod'],
-	},
+    },
+    {
+        name: "Competitive",
+        section: "ORAS Singles",
+        
+        challengeShow: false,
+        rated: false,
+        ruleset: ['PotD', 'Pokemon', 'Sleep Clause Mod', 'HP Percentage Mod', 'Cancel Mod'],
+    },
 	{
 		name: "OU",
 		desc: [

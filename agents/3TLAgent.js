@@ -106,7 +106,7 @@ class MultiTLAgent {
     decide(gameState, options, mySide) {
         // It is important to start by making a deep copy of gameState.  We want to avoid accidentally modifying the gamestate.
         var nstate = this.cloneBattle(gameState);
-        
+        nstate.me = mySide.n;
         //console.log(gameState.sides[0].clearChoice);
         //console.log(nstate.sides[0].clearChoice);
         // The receive function is going to need access to this variable, so it makes sense to set it as a class member.
@@ -115,7 +115,7 @@ class MultiTLAgent {
         var choices = Object.keys(options);
 
         function battleSend(type, data) {
-            if (this.sides[1].active[0].hp == 0) {
+            if (this.sides[1 - this.me].active[0].hp == 0 || this.sides[1 - this.me].currentRequest != 'move') {
                 this.isTerminal = true;
             }
         }
@@ -130,12 +130,14 @@ class MultiTLAgent {
         // battle id (we can ignore this), type (we use 'choose' to indicate a choice is made), player (formatted as p1 or p2), choice
         for (var choice in options) {
             var cstate = this.cloneBattle(nstate);
-            
+            cstate.isTerminal = false;
+            cstate.baseMove = choice;
             cstate.receive(['', 'choose', 'p' + (1 - this.mySID + 1), 'move splash']);
             cstate.receive(['', 'choose', 'p' + (this.mySID + 1), choice]);
             // A variable to track if the state is an end state (an end state here is defined as an event wherein the opponent is forced to switch).
-            cstate.isTerminal = false;
-            cstate.baseMove = choice;
+            if (cstate.isTerminal) {
+                return cstate.baseMove;
+            }
             states.push(cstate);
         }
 
@@ -151,41 +153,23 @@ class MultiTLAgent {
                 console.log('FAILURE!');
                 return this.fetch_random_key(options);
             }
-            if (cState.isTerminal) {
-                return cState.baseMove;
-            }
             var myTurnOptions = this.getOptions(cState, mySide.id);
             for (var choice in myTurnOptions) {
                 if (choice.startsWith('move')) {
                     var nstate = this.cloneBattle(cState);
                     nstate.receive(['', 'choose', 'p' + (1 - this.mySID + 1), 'move splash']);
                     nstate.receive(['', 'choose', 'p' + (this.mySID + 1), choice]);
+                    if (nstate.isTerminal) {
+                        return nstate.baseMove;
+                    }
                     states.push(nstate);
                 }
             }
             i++;
-            console.log(i + ": " + cState.sides[1 - this.mySID].active[0].hp + ", " + cState.sides[1].currentRequest);
+            
         }
-        
+        console.log('oops I timed out!');
         return this.fetch_random_key(options);
-    }
-
-    receive(data, state) {
-        var lines = data.split('\n');
-        if (lines[1] == 'request') {
-            if (lines[2] == this.mySide) {
-                state.myTurnOptions = this.parseRequestData(lines[4]);
-            }
-            else {
-                var requestData = JSON.parse(lines[4]);
-                if (!requestData['active'] || state.ended) {
-                    state.isTerminal = true;
-                }
-            }
-        }
-        console.log(state.sides[0].active[0].name);
-        console.log(state.sides[1].active[0].name);
-        console.log(state.sides[1].active[0].hp);
     }
 
     assumePokemon(pname, plevel, pgender, side) {
