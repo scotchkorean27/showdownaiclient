@@ -6,6 +6,7 @@ var OfflineGame = require('./OfflineGame').OfflineGame;
 var InterfaceLayer = require('./interfaceLayer').InterfaceLayer;
 var Agent = require('./agents/OTLAgent').Agent;
 var BFSAgent = require('./agents/3TLAgent').Agent;
+var RandomAgent = require('./agents/RandomAgent').Agent;
 
 try {
     require.resolve('./zarel/config/config');

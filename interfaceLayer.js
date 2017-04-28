@@ -3,7 +3,6 @@
 var simulator = require('./zarel/battle-engine').Battle;
 var fs = require('fs');
 
-// NTS: Due to zoroark-related nonsense, the order of pokemon on the server may be different from the order on the client.  Use strings for all lookups to ensure this doesn't become a problem
 class InterfaceLayer {
     constructor(id, username, cLayer, agent) {
         this.id = id;
@@ -61,21 +60,11 @@ class InterfaceLayer {
         }
         if (side.active[pos]) {
             let oldActive = side.active[pos];
-            if (this.battle.cancelMove(oldActive)) {
-                for (let i = 0; i < side.foe.active.length; i++) {
-                    if (side.foe.active[i].isStale >= 2) {
-                        oldActive.isStaleCon++;
-                        oldActive.isStaleSource = 'drag';
-                        break;
-                    }
-                }
-            }
             if (oldActive.switchCopyFlag === 'copyvolatile') {
                 delete oldActive.switchCopyFlag;
                 pokemon.copyVolatileFrom(oldActive);
             }
         }
-        pokemon.isActive = true;
         if (side.active[pos]) {
             let oldActive = side.active[pos];
             oldActive.isActive = false;
@@ -89,6 +78,8 @@ class InterfaceLayer {
             oldActive.clearVolatile();
         }
         side.active[pos] = pokemon;
+        pokemon.isActive = true;
+        pokemon.isStarted = true;
         pokemon.activeTurns = 0;
         if (pokemon.statusData.stage) {
             pokemon.statusData.stage = 0;
@@ -227,6 +218,7 @@ class InterfaceLayer {
         }
         pokemon.volatiles[status.id] = { id: status.id };
         pokemon.volatiles[status.id].target = pokemon;
+        pokemon.volatiles[status.id].source = pokemon.side.foe.active[0];
         if (status.duration) {
             pokemon.volatiles[status.id].duration = status.duration;
         }
@@ -343,8 +335,7 @@ class InterfaceLayer {
                 this.cTurnMoves[option].choice = option;
             }
             if (requestData['forceSwitch'] && requestData['forceSwitch'][0]) {
-                // Some weird bullshit happens when 
-                this.cLayer.send(this.id + '|/choose ' + this.agent.decide(this.battle, this.cTurnOptions, this.battle.sides[this.mySID]), this.mySide);
+                this.cLayer.send(this.id + '|/choose ' + this.agent.decide(this.battle, this.cTurnOptions, this.battle.sides[this.mySID], true), this.mySide);
             }
         }
         else if (tag == 'switch') {
@@ -465,6 +456,7 @@ class InterfaceLayer {
             else {
                 choice = this.agent.decide(this.battle, this.cTurnOptions, this.battle.sides[this.mySID]);
             }
+            console.log("I chose " + choice);
             this.cLayer.send(this.id + '|/choose ' + choice, this.mySide);
                 // Add code that processes the end of a turn
         }
@@ -816,6 +808,7 @@ class InterfaceLayer {
         else {
         
             //    fs.appendFile('log.txt', line + '\n', function (err) { });
+
             console.log(line);
             
         }

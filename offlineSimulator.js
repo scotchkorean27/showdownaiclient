@@ -67,7 +67,6 @@ class Battle {
     }
 
     startGame() {
-        
         this.joinGame(this.p1);
         
         this.joinGame(this.p2);
