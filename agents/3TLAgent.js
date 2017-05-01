@@ -110,7 +110,7 @@ class MultiTLAgent {
             choice: 'skip',
             pokemon: side.active[side.choiceData.choices.length],
         });
-        side.choiceData.skipsIndices.add(side.choiceData.choices.length);
+        side.battle.checkDecisions();
     }
 
     decide(gameState, options, mySide, forceSwitch) {
@@ -142,10 +142,8 @@ class MultiTLAgent {
             var moveid = options[choice].id;
             cstate.isTerminal = false;
             cstate.baseMove = choice;
-            cstate.choose('p' + (this.mySID + 1), choice);
             this.chooseSkip(cstate.sides[1 - cstate.me]);
-            cstate.commitDecisions();
-            var shitCounter = 0;
+            cstate.choose('p' + (this.mySID + 1), choice);
             // A variable to track if the state is an end state (an end state here is defined as an event wherein the opponent is forced to switch).
             if (cstate.isTerminal) {
                 return cstate.baseMove;
@@ -169,14 +167,11 @@ class MultiTLAgent {
             for (var choice in myTurnOptions) {
                 var nstate = this.cloneBattle(cState);
                 var starthp = nstate.sides[1 - cState.me].active[0].hp;
+                this.chooseSkip(nstate.sides[1 - nstate.me]);                
                 nstate.receive(['', 'choose', 'p' + (this.mySID + 1), choice]);
-                this.chooseSkip(nstate.sides[1 - nstate.me]);
-                nstate.commitDecisions();
-                
                 if (nstate.isTerminal) {
                     return nstate.baseMove;
                 }
-                
                 states.push(nstate);
             }
             i++;
