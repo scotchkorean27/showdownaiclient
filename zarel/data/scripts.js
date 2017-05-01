@@ -93,7 +93,6 @@ exports.BattleScripts = {
 		if (move.flags['charge'] && !pokemon.volatiles[move.id]) {
 			attrs = '|[still]'; // suppress the default move animation
 		}
-
 		let movename = move.name;
 		if (move.id === 'hiddenpower') movename = 'Hidden Power';
 		if (sourceEffect) attrs += '|[from]' + this.getEffect(sourceEffect);
@@ -119,7 +118,7 @@ exports.BattleScripts = {
 			if (extraPP > 0) {
 				pokemon.deductPP(move, extraPP);
 			}
-		}
+        }
 
 		if (!this.runEvent('TryMove', pokemon, target, move)) {
 			return true;
@@ -177,10 +176,9 @@ exports.BattleScripts = {
 		if (!pokemon.hp) {
 			this.faint(pokemon, pokemon, move);
 		}
-
 		if (!moveResult) {
-			this.singleEvent('MoveFail', move, null, target, pokemon, move);
-			return true;
+            this.singleEvent('MoveFail', move, null, target, pokemon, move);
+            return true;
 		}
 
 		if (move.selfdestruct) {
@@ -190,12 +188,11 @@ exports.BattleScripts = {
 		if (!move.negateSecondary && !(pokemon.hasAbility('sheerforce') && pokemon.volatiles['sheerforce'])) {
 			this.singleEvent('AfterMoveSecondarySelf', move, null, pokemon, target, move);
 			this.runEvent('AfterMoveSecondarySelf', pokemon, target, move);
-		}
+        }
 		return true;
 	},
 	tryMoveHit: function (target, pokemon, move, spreadHit) {
 		if (move.selfdestruct && spreadHit) pokemon.hp = 0;
-
 		this.setActiveMove(move, pokemon, target);
 		let hitResult = true;
 
@@ -208,7 +205,7 @@ exports.BattleScripts = {
 
 		if (!this.singleEvent('Try', move, null, pokemon, target, move)) {
 			return false;
-		}
+        }
 
 		if (move.target === 'all' || move.target === 'foeSide' || move.target === 'allySide' || move.target === 'allyTeam') {
 			if (move.target === 'all') {
@@ -242,7 +239,6 @@ exports.BattleScripts = {
 			if (hitResult === false) this.add('-fail', target);
 			return false;
 		}
-
 		let boostTable = [1, 4 / 3, 5 / 3, 2, 7 / 3, 8 / 3, 3];
 
 		// calculate true accuracy
@@ -280,7 +276,7 @@ exports.BattleScripts = {
 			}
 		} else {
 			accuracy = this.runEvent('ModifyAccuracy', target, pokemon, move, accuracy);
-		}
+        }
 		if (move.alwaysHit || (move.id === 'toxic' && this.gen >= 6 && pokemon.hasType('Poison'))) {
 			accuracy = true; // bypasses ohko accuracy modifiers
 		} else {
@@ -288,7 +284,7 @@ exports.BattleScripts = {
 		}
 		if (accuracy !== true && this.random(100) >= accuracy) {
 			if (!move.spreadHit) this.attrLastMove('[miss]');
-			this.add('-miss', pokemon, target);
+                this.add('-miss', pokemon, target);
 			return false;
 		}
 
@@ -383,7 +379,6 @@ exports.BattleScripts = {
 			damage = this.moveHit(target, pokemon, move);
 			totalDamage = damage;
 		}
-
 		if (move.recoil && totalDamage) {
 			this.damage(this.calcRecoilDamage(totalDamage, move), pokemon, target, 'recoil');
 		}
@@ -395,20 +390,17 @@ exports.BattleScripts = {
 		if (target && pokemon !== target) target.gotAttacked(move, damage, pokemon);
 
 		if (move.ohko) this.add('-ohko');
-
 		if (!damage && damage !== 0) return damage;
 
 		if (target && !move.negateSecondary && !(pokemon.hasAbility('sheerforce') && pokemon.volatiles['sheerforce'])) {
 			this.singleEvent('AfterMoveSecondary', move, null, target, pokemon, move);
 			this.runEvent('AfterMoveSecondary', target, pokemon, move);
 		}
-
 		return damage;
 	},
 	moveHit: function (target, pokemon, move, moveData, isSecondary, isSelf) {
 		let damage;
 		move = this.getMoveCopy(move);
-
 		if (!moveData) moveData = move;
 		if (!moveData.flags) moveData.flags = {};
 		let hitResult = true;
@@ -454,7 +446,6 @@ exports.BattleScripts = {
 			if (hitResult === false) this.add('-fail', target);
 			return false;
 		}
-
 		if (target && !isSecondary && !isSelf) {
 			if (move.target !== 'all' && move.target !== 'allySide' && move.target !== 'foeSide') {
 				hitResult = this.runEvent('TryPrimaryHit', target, pokemon, moveData);
@@ -471,11 +462,9 @@ exports.BattleScripts = {
 		if (!hitResult) {
 			return false;
 		}
-
 		if (target) {
 			let didSomething = false;
-
-			damage = this.getDamage(pokemon, target, moveData);
+            damage = this.getDamage(pokemon, target, moveData);
 
 			// getDamage has several possible return values:
 			//
@@ -499,7 +488,7 @@ exports.BattleScripts = {
 				}
 				damage = this.damage(damage, target, pokemon, move);
 				if (!(damage || damage === 0)) {
-					this.debug('damage interrupted');
+                    this.debug('damage interrupted');
 					return false;
 				}
 				didSomething = true;
@@ -508,10 +497,9 @@ exports.BattleScripts = {
 				if (damage === false && !isSecondary && !isSelf) {
 					this.add('-fail', target);
 				}
-				this.debug('damage calculation interrupted');
+                this.debug('damage calculation interrupted');
 				return false;
 			}
-
 			if (moveData.boosts && !target.fainted) {
 				hitResult = this.boost(moveData.boosts, target, pokemon, move, isSecondary, isSelf);
 				didSomething = didSomething || hitResult;
@@ -560,7 +548,7 @@ exports.BattleScripts = {
 			}
 			if (moveData.selfSwitch) {
 				if (this.canSwitch(pokemon.side)) didSomething = true; // at least defer the fail message to later
-			}
+            }
 			// Hit events
 			//   These are like the TryHit events, except we don't need a FieldHit event.
 			//   Scroll up for the TryHit event documentation, and just ignore the "Try" part. ;)
@@ -576,7 +564,6 @@ exports.BattleScripts = {
 				}
 				if (moveData.onAfterHit) hitResult = this.singleEvent('AfterHit', moveData, {}, target, pokemon, move);
 			}
-
 			if (!hitResult && !didSomething && !moveData.self && !moveData.selfdestruct) {
 				if (!isSelf && !isSecondary) {
 					if (hitResult === false || didSomething === false) this.add('-fail', target);
@@ -584,7 +571,8 @@ exports.BattleScripts = {
 				this.debug('move failed because it did nothing');
 				return false;
 			}
-		}
+
+        }
 		if (moveData.self) {
 			let selfRoll;
 			if (!isSecondary && moveData.self.boosts) selfRoll = this.random(100);
@@ -613,7 +601,7 @@ exports.BattleScripts = {
 		}
 		if (move.selfSwitch && pokemon.hp) {
 			pokemon.switchFlag = move.selfSwitch;
-		}
+        }
 		return damage;
 	},
 
@@ -2107,12 +2095,12 @@ exports.BattleScripts = {
 		let pokemon = [];
 
         // This is modified from the Zarel's showdown code, but since the showdown AI server does not use ubers in its randoms, it makes sense to disallow it here too.
-		let excludedTiers = {'NFE':1, 'LC Uber':1, 'LC':1, 'Uber': 1};
+		let excludedTiers = {'NFE':1, 'LC Uber':1, 'LC':1, 'Uber': 1, 'NU': 1, 'PU': 1};
 		let allowedNFE = {'Chansey':1, 'Doublade':1, 'Gligar':1, 'Porygon2':1, 'Scyther':1, 'Togetic':1};
 
 		// For Monotype
 		let isMonotype = this.format === 'monotyperandombattle';
-		let typePool = Object.keys(this.data.TypeChart);
+		let typePool = Object.keys(Tools.data.TypeChart);
 		let type = typePool[this.random(typePool.length)];
 
 		let pokemonPool = [];

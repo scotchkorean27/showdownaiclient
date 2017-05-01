@@ -32,10 +32,12 @@
   <ItemGroup>
     <Compile Include="agents\3TLAgent.js" />
     <Compile Include="agents\CloneTest.js" />
+    <Compile Include="agents\DSBFS.js" />
     <Compile Include="agents\OTLAgent2.js" />
     <Compile Include="agents\OTLAgent.js" />
     <Compile Include="agents\RandomAgent.js" />
     <Compile Include="app.js" />
+    <Compile Include="clone.js" />
     <Compile Include="InterfaceLayer.js" />
     <Compile Include="OfflineGame.js" />
     <Compile Include="OfflineSimulator.js" />

@@ -80,7 +80,7 @@ A choice is supplied by invoking the Battle object's "receive" function.  Receiv
 
 ['', 'choose', player ('p1' or 'p2'), choice (switch X or move Y)]
 
-Note that Pokemon does not always advance full turns, but may also advance a "half turn" of sorts.  In this case, the game state will require additional input from one of the players before the next turn can start.  This is signaled by an invocation of Battle's send function.  It is recommended that an agent that steps forward multiple turns overrides Battle's send function to process additional choice requests.
+Note that Pokemon does not always advance full turns, but may also advance a "half turn" of sorts.  This is signaled by a side's currentRequest variable being equal to 'switch'.  In this case, the side's player will need to make an additional move (switching to another Pokemon) before the game can advance.  This occurs when a Pokemon faints, uses a switching move (Baton Pass, Volt Switch, U-Turn), or is dragged out (Roar, Whirlwind, Dragon Tail).  If you want to advance entire turns at a time, it is recommended that after simulating a turn, you perform a check to see if either party has to switch.
 
 For an example of this, refer to agents/3TLAgent.js.
 

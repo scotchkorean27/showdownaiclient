@@ -3913,7 +3913,6 @@ let Battle = (() => {
 		effect = this.getEffect(effect);
 		if (!(damage || damage === 0)) return damage;
 		if (damage !== 0) damage = this.clampIntRange(damage, 1);
-
 		if (effect.id !== 'struggle-recoil') { // Struggle recoil is not affected by effects
 			if (effect.effectType === 'Weather' && !target.runStatusImmunity(effect.id)) {
 				this.debug('weather immunity');
@@ -3966,7 +3965,6 @@ let Battle = (() => {
 		} else {
 			damage = this.runEvent('AfterDamage', target, source, effect, damage);
 		}
-
 		return damage;
 	};
 	Battle.prototype.directDamage = function (damage, target, source, effect) {
@@ -4766,9 +4764,9 @@ let Battle = (() => {
 			this.updateSpeed();
 			this.residualEvent('Residual');
 			break;
-
+        /*
 		case 'skip':
-			throw new Error("Decision illegally skipped!");
+			throw new Error("Decision illegally skipped!");*/
 		}
 
 		// phazing (Roar, etc)
