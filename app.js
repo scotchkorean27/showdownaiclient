@@ -5,7 +5,7 @@ Tools.includeData();
 var OfflineGame = require('./OfflineGame').OfflineGame;
 var InterfaceLayer = require('./interfaceLayer').InterfaceLayer;
 var Agent = require('./agents/OTLAgent').Agent;
-var BFSAgent = require('./agents/3TLAgent').Agent;
+var BFSAgent = require('./agents/BFSAgent').Agent;
 var RandomAgent = require('./agents/RandomAgent').Agent;
 
 try {
