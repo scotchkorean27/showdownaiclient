@@ -4,9 +4,10 @@ Tools.includeData();
 
 var OfflineGame = require('./OfflineGame').OfflineGame;
 var InterfaceLayer = require('./interfaceLayer').InterfaceLayer;
-var Agent = require('./agents/OTLAgent').Agent;
+var Agent = require('./agents/BWAgent').Agent;
 var BFSAgent = require('./agents/3TLAgent').Agent;
 var RandomAgent = require('./agents/RandomAgent').Agent;
+var OTLAgent = require('./agents/OTLAgent').Agent;
 
 try {
     require.resolve('./zarel/config/config');
@@ -167,5 +168,5 @@ else {
         }
     });
     var game = new OfflineGame();
-    game.playGames(new BFSAgent(), new Agent(), 1, 'competitive');
+    game.playGames(new OTLAgent(), new Agent(), 1, 'randommirror');
 }
