@@ -16,7 +16,7 @@ var Pokemon = require('../zarel/battle-engine').BattlePokemon;
 // All agents should also come with an assumptions object, which will guide how the InterfaceLayer deals with various aspects of hidden information.
 
 class RandomAgent {
-    constructor() { }
+    constructor() { this.name = 'Random' }
 
     fetch_random_key(obj) {
         var temp_key, keys = [];

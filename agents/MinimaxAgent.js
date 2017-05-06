@@ -8,7 +8,7 @@ var PriorityQueue = require('priorityqueuejs');
 // Sometimes you want to simulate things in the game that are more complicated than just damage.  For these things, we can advance our fun little forward model.
 // This agent shows a way to advance the forward model.
 class VGreedyAgent {
-    constructor() { }
+    constructor() { this.name = 'minimax' }
 
     cloneBattle(state) {
         var nBattle = clone(state);
@@ -72,7 +72,7 @@ class VGreedyAgent {
 
     evaluateState(state) {
         var myp = state.sides[state.me].active[0].hp / state.sides[state.me].active[0].maxhp;
-        var thp = state.sides[1 - state.me].active[0].hp / state.sides[1 - -state.me].active[0].maxhp;
+        var thp = state.sides[1 - state.me].active[0].hp / state.sides[1 - state.me].active[0].maxhp;
         return myp - 3 * thp - 0.3 * state.turn;
     }
 
@@ -92,6 +92,8 @@ class VGreedyAgent {
     }
 
     decide(gameState, options, mySide, forceSwitch) {
+        var d = new Date();
+        var n = d.getTime();
         // It is important to start by making a deep copy of gameState.  We want to avoid accidentally modifying the gamestate.
         var nstate = this.cloneBattle(gameState);
         nstate.p1.currentRequest = 'move';
@@ -135,23 +137,9 @@ class VGreedyAgent {
                 pQueue.enq(badstate);
             }
         }
-        console.time("dbsave");
-        for (var i = 0; i < 1000; i++) {
-            var cstate = this.cloneBattle(nstate);
-            cstate.choose('p1', 'move 1');
-            cstate.choose('p2', 'move 1');
-        }
-        console.timeEnd("dbsave");
-        console.time("dbsave2");
-        for (var i = 0; i < 1000; i++) {
-            var cstate = this.cloneBattle(nstate);
-            var wstate = this.getWorstOutcome(cstate, 'move 1', cstate.me);
-        }
-        console.timeEnd("dbsave2");
-        console.log(killme);
 
         var i = 0;
-        while (i < 30) {
+        while ((new Date()).getTime() - n <= 19000) {
             
             // console.log(pQueue.size());
             // console.log(this.evaluateState(cState, cState.me) + ", " + (cState.sides[cState.me].active[0].hp / cState.sides[cState.me].active[0].maxhp) + ", " + (cState.sides[1 - cState.me].active[0].hp / cState.sides[1 - cState.me].active[0].maxhp));

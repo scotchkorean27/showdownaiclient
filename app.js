@@ -5,8 +5,11 @@ Tools.includeData();
 var OfflineGame = require('./OfflineGame').OfflineGame;
 var InterfaceLayer = require('./interfaceLayer').InterfaceLayer;
 var Agent = require('./agents/OTLAgent').Agent;
-var BFSAgent = require('./agents/QLearner').Agent;
+var QLearningAgent = require('./agents/QLearner').Agent;
+var MLQAgent = require('./agents/MLQLearner').Agent;
 var RandomAgent = require('./agents/RandomAgent').Agent;
+var BFSAgent = require('./agents/BFSAgent').Agent;
+var MinimaxAgent = require('./agents/MinimaxAgent').Agent;
 
 try {
     require.resolve('./zarel/config/config');
@@ -167,5 +170,6 @@ else {
         }
     });
     var game = new OfflineGame();
-    game.playGames(new BFSAgent(), new Agent(), 1, 'competitive');
+    game.playGames(new BFSAgent(), new MinimaxAgent(), 30, 'competitive');
+    console.log("THIS WAS AN EXPERIMENT! DO NOT CLOSE THIS!");
 }

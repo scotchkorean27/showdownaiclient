@@ -7,7 +7,7 @@ var BattleSide = require('../zarel/battle-engine').BattleSide;
 // Sometimes you want to simulate things in the game that are more complicated than just damage.  For these things, we can advance our fun little forward model.
 // This agent shows a way to advance the forward model.
 class MultiTLAgent {
-    constructor() { }
+    constructor() { this.name = 'BFS' }
 
     cloneBattle(state) {
         var nBattle = clone(state);
@@ -73,6 +73,9 @@ class MultiTLAgent {
         this.mySID = mySide.n;
         this.mySide = mySide.id;
 
+        var d = new Date();
+        var n = d.getTime();
+
         function battleSend(type, data) {
             if (this.sides[1 - this.me].active[0].hp == 0) {
                 this.isTerminal = true;
@@ -87,7 +90,7 @@ class MultiTLAgent {
         // Next we simulate the outcome of all our possible actions, while assuming our opponent does nothing each turn (uses splash, but it's kind of the same thing).
         // The gamestate receives choice data as an array with 4 items
         // battle id (we can ignore this), type (we use 'choose' to indicate a choice is made), player (formatted as p1 or p2), choice
-        console.time('bfstest');
+
 
         for (var choice in options) {
             var cstate = this.cloneBattle(nstate);
@@ -112,7 +115,7 @@ class MultiTLAgent {
         
         //console.log(gameState);
         
-        while (i < 200) {
+        while ((new Date()).getTime() - n < 19000) {
             var cState = states.shift();
             if (!cState) {
                 console.log('FAILURE!');
@@ -125,15 +128,13 @@ class MultiTLAgent {
                 nstate.choose('p' + (this.mySID + 1), choice);
                 i++;
                 if (nstate.isTerminal) {
-                    //return nstate.baseMove;
+                    return nstate.baseMove;
                 }
                 if (!nstate.badTerminal) {
                     states.push(nstate);
                 }
             }            
         }
-        console.timeEnd('bfstest');
-        console.log(killme);
         console.log('oops I timed out!');
         return this.fetch_random_key(options);
     }

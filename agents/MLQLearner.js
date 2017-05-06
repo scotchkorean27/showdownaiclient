@@ -4,12 +4,21 @@ var Pokemon = require('../zarel/battle-engine').BattlePokemon;
 var clone = require('../clone');
 var BattleSide = require('../zarel/battle-engine').BattleSide;
 
+function sigmoid(x) {
+    return 1 / (1 + Math.pow(Math.E, -x))
+}
+
+function sigmoidFD(x) {
+    return 0.5 * (1 - x) * (1 + x);
+}
+
 class Neuron {
-    constructor(weights) {
+    constructor(weights, bias) {
         this.weights = {};
         if (weights) {
             this.weights = weights;
         }
+        this.bias = typeof bias !== 'undefined' ? bias : 0;
     }
     forward(input) {
         var total = 0;
@@ -59,9 +68,10 @@ class Neuron {
                 if (!this.weights[item]) {
                     this.weights[item] = Math.random() * 2 - 1;
                 }
-                this.weights[item] -= 2 * learningrate * gradient * input[item];
+                this.weights[item] -= learningrate * gradient * input[item];
             }
         }
+        this.bias -= learningrate * gradient;
     }
     subbackward(input, subneuron, gradient, learningrate) {
         for (var item in input) {
@@ -75,28 +85,37 @@ class Neuron {
                 if (!subneuron[item]) {
                     subneuron[item] = Math.random() * 2 - 1;
                 }
-                subneuron[item] -= 2 * learningrate * gradient * input[item];
+                subneuron[item] -= learningrate * gradient * input[item];
             }
         }
     }
 }
 
-class QLearning {
+class MultiLayerQLearning {
     constructor() {
-        this.name = 'QLearner';
+        this.name = 'MLQ';
         var fs = require('fs');
-        this.filename = 'perceptron.json';
-        if (fs.existsSync(this.filename)) {
-            this.perceptron = new Neuron(JSON.parse(fs.readFileSync(this.filename)));
-        }
-        else {
-            this.perceptron = new Neuron();
-            fs.writeFileSync(this.filename, JSON.stringify(this.perceptron.weights));
-        }
+        this.filename = 'MLQ.json';
         this.learningRate = 0.05;
-        this.bias = 0;
         this.lastencodings = [];
         this.memory = 3;
+        this.hiddenSize = 50;
+        this.hiddenLayer = {};
+        if (fs.existsSync(this.filename)) {
+            var fobj = JSON.parse(fs.readFileSync(this.filename));
+            for (var index in fobj.hiddenLayer) {
+                this.hiddenLayer[index] = new Neuron(fobj.hiddenLayer[index].weights, fobj.hiddenLayer[index].bias);
+            }
+            this.outputLayer = new Neuron(fobj.outputLayer.weights, fobj.outputLayer.bias);
+        }
+        else {
+            for (var i = 0; i < this.hiddenSize; i++) {
+                this.hiddenLayer[i] = new Neuron();
+            }
+            this.outputLayer = new Neuron();
+            fs.writeFileSync(this.filename, JSON.stringify({ hiddenLayer: this.hiddenLayer, outputLayer: this.outputLayer }));
+        }
+
     }
 
     cloneBattle(state) {
@@ -256,21 +275,28 @@ class QLearning {
         var bestscore = -1;
         var bestchoice = '';
         var bestencoding = {};
+        var bestl1out = {};
 
         for (var choice in options) {
             var encoding = this.encode(nState, options[choice]);
-            var forward = this.perceptron.forward(encoding);
-            forward = 1 / (1 + Math.pow(Math.E, -forward));
+            var l1out = {};
+            for (var index in this.hiddenLayer) {
+                var forward = this.hiddenLayer[index].forward(encoding);
+                l1out[index] = sigmoid(forward);
+            }
+            var forward = this.outputLayer.forward(l1out);
+            forward = sigmoid(forward);
             if (forward > bestscore) {
                 bestscore = forward;
                 bestchoice = choice;
                 bestencoding = encoding;
+                bestl1out = l1out;
             }
         }
         if (this.lastencodings.length >= this.memory) {
             this.lastencodings.shift();
         }
-        this.lastencodings.push({ encoding: bestencoding, score: bestscore });
+        this.lastencodings.push({ encoding: bestencoding, l1out: bestl1out, score: bestscore });
         return bestchoice;
     }
 
@@ -309,24 +335,25 @@ class QLearning {
     }
 
     digest(line) {
+        console.log(line);
         var arr = line.split("|");
         var tag = arr[1];
         if (tag == 'win') {
             var fs = require('fs');
-            fs.writeFileSync(this.filename, JSON.stringify(this.perceptron.weights));
+            fs.writeFileSync(this.filename, JSON.stringify({ hiddenLayer: this.hiddenLayer, outputLayer: this.outputLayer }));
         }
         else if (tag == 'faint') {
-            if (arr[2].startsWith(this.mySide)) {
-                this.lockEvaluation = true;
-                for (var index in this.lastencodings) {
-                    this.perceptron.backward(this.lastencodings[index].encoding, this.lastencodings[index].score + 1, this.learningRate);
+            var target = arr[2].startsWith(this.mySide) ? -1 : 1;
+            for (var index in this.lastencodings) {
+                var entry = this.lastencodings[index];
+                var oGrad = (entry.score - target) * sigmoidFD(entry.score);
+                var hGrad = {};
+                for (var i in entry.l1out) {
+                    hGrad[i] = sigmoidFD(entry.l1out[i]) * this.outputLayer.weights[i] * oGrad;
                 }
-                this.lastencodings = [];
-            }
-            else {
-                this.lockEvaluation = true;
-                for (var index in this.lastencodings) {
-                    this.perceptron.backward(this.lastencodings[index].encoding, this.lastencodings[index].score - 1, this.learningRate);
+                this.outputLayer.backward(entry.l1out, oGrad, this.learningRate);
+                for (var i in entry.l1out) {
+                    this.hiddenLayer[i].backward(entry.encoding, hGrad[index], this.learningRate);
                 }
             }
         }
@@ -336,4 +363,4 @@ class QLearning {
     }
 }
 
-exports.Agent = QLearning;
+exports.Agent = MultiLayerQLearning;

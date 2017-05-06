@@ -5,13 +5,15 @@ class OfflineLayer {
     constructor() { }
 
     playGames(agent1, agent2, numgames, format) {
+        var p1n = typeof (agent1.name) !== 'undefined' && agent1.name != 'player2' ? agent1.name : 'player1';
+        var p2n = typeof (agent2.name) !== 'undefined' && agent2.name != p1n ? agent2.name : 'player2';
         var p1wins = 0;
         var p2wins = 0;
         for (var i = 0; i < numgames; i++) {
             var isComp = (toId(format) == 'competitive');
             format = (isComp ? 'randombattle': format);
-            var p1 = { name: 'player1', userid: 'player1', interface: new InterfaceLayer('test game', 'test', null, agent1)};
-            var p2 = { name: 'player2', userid: 'player2', interface: new InterfaceLayer('test game', 'test2', null, agent2)};
+            var p1 = { name: p1n, userid: p1n, interface: new InterfaceLayer('test game', p1n, null, agent1)};
+            var p2 = { name: p2n, userid: p2n, interface: new InterfaceLayer('test game', p2n, null, agent2)};
             var roomData = { id: 'test room' }
             roomData.p1 = p1;
             roomData.p2 = p2;
@@ -34,8 +36,8 @@ class OfflineLayer {
 
                 format = 'competitive';
                 for (var i = 0; i < 2; i++) {
-                    p1.interface = new InterfaceLayer('test game', 'test', null, agent1);
-                    p2.interface = new InterfaceLayer('test game', 'test2', null, agent2);
+                    p1.interface = new InterfaceLayer('test game', p1n, null, agent1);
+                    p2.interface = new InterfaceLayer('test game', p2n, null, agent2);
                     var roomData = { id: 'test room' }
                     roomData.p1 = p1;
                     roomData.p2 = p2;
@@ -52,8 +54,8 @@ class OfflineLayer {
                 p1.team = teamb;
                 p2.team = teama;
                 for (var i = 0; i < 3; i++) {
-                    p1.interface = new InterfaceLayer('test game', 'test', null, agent1);
-                    p2.interface = new InterfaceLayer('test game', 'test2', null, agent2);
+                    p1.interface = new InterfaceLayer('test game', p1n, null, agent1);
+                    p2.interface = new InterfaceLayer('test game', p2n, null, agent2);
                     var roomData = { id: 'test room' }
                     roomData.p1 = p1;
                     roomData.p2 = p2;
@@ -69,8 +71,8 @@ class OfflineLayer {
                 }
             }
         }
-        console.log('p1 wins: ' + p1wins);
-        console.log('p2 wins: ' + p2wins);
+        console.log(p1n + ' wins: ' + p1wins);
+        console.log(p2n + ' wins: ' + p2wins);
     }
     //console.log(battle);
 }
