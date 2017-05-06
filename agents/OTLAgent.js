@@ -27,7 +27,7 @@ class OTLAgent {
                 var cDamage = nstate.getDamage(mySide.active[0], oppactive[0], options[option].id, false);
                 
                 if (cDamage && cDamage > maxDamage) {
-                    // console.log(mySide.active[0].name + "'s " + options[option].move + " is expected to deal " + cDamage + " damage to " + oppactive[0].name);
+                    console.log(mySide.active[0].name + "'s " + options[option].move + " is expected to deal " + cDamage + " damage to " + oppactive[0].name);
                     maxDamage = cDamage;
                     bOption = option;
                 }
@@ -39,7 +39,7 @@ class OTLAgent {
                     var cDamage = nstate.getDamage(mySide.pokemon[pIndex], oppactive[0], mID, false);
                     
                     if (cDamage && cDamage > maxDamage) {
-                        // console.log(mySide.pokemon[pIndex].name + "'s " + mID + " is expected to deal " + cDamage + " damage to " + oppactive[0].name);
+                        console.log(mySide.pokemon[pIndex].name + "'s " + mID + " is expected to deal " + cDamage + " damage to " + oppactive[0].name);
                         maxDamage = cDamage;
                         bOption = option;
                     }

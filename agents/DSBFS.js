@@ -93,6 +93,11 @@ class DoubleStandardBFSAgent {
             return this.selectForAggression(nstate, options);
         }
 
+        nstate.send = battleSend;
+        nstate.start();
+
+
+
         var states = [];
         // Next we simulate the outcome of all our possible actions, while assuming our opponent does nothing each turn (uses splash, but it's kind of the same thing).
         // The gamestate receives choice data as an array with 4 items
