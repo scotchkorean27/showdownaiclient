@@ -39,45 +39,6 @@ class MultiTLAgent {
         return keys[Math.floor(Math.random() * keys.length)];
     }
 
-    teachSplash(pokemon) {
-        var move = {
-            num: 150,
-            accuracy: true,
-            basePower: 0,
-            category: "Status",
-            desc: "Nothing happens...",
-            shortDesc: "Does nothing (but we still love it).",
-            id: "splash",
-            name: "Splash",
-            pp: 40,
-            priority: 0,
-            flags: { gravity: 1 },
-            onTryHit: function (target, source) {
-                this.add('-nothing');
-                return null;
-            },
-            secondary: false,
-            target: "self",
-            type: "Normal",
-            contestType: "Cute",
-        };
-        if (move.id && pokemon.moves.indexOf(move) == -1) {
-            pokemon.moves.push('splash');
-            var nMove = {
-                move: move.name,
-                id: move.id,
-                pp: (move.noPPBoosts ? move.pp : move.pp * 8 / 5),
-                maxpp: (move.noPPBoosts ? move.pp : move.pp * 8 / 5),
-                target: move.target,
-                disabled: false,
-                disabledSource: '',
-                used: false,
-            };
-            pokemon.baseMoveset.push(nMove);
-            pokemon.moveset.push(nMove);
-        }
-    }
-
     parseRequestData(requestData) {
         if (typeof (requestData) == 'string') { requestData = JSON.parse(request); }
         var cTurnOptions = {};
@@ -103,16 +64,6 @@ class MultiTLAgent {
         return cTurnOptions;
     }
 
-    chooseSkip(side) {
-        side.choiceData.choices.push('skip');
-        side.choiceData.decisions.push({
-            // Should never hit the battle queue
-            choice: 'skip',
-            pokemon: side.active[side.choiceData.choices.length],
-        });
-        side.battle.checkDecisions();
-    }
-
     decide(gameState, options, mySide, forceSwitch) {
         // It is important to start by making a deep copy of gameState.  We want to avoid accidentally modifying the gamestate.
         var nstate = this.cloneBattle(gameState);
@@ -123,10 +74,10 @@ class MultiTLAgent {
         this.mySide = mySide.id;
 
         function battleSend(type, data) {
-            if (this.sides[1 - this.me].active[0].hp == 0 || this.sides[1 - this.me].currentRequest == 'switch') {
+            if (this.sides[1 - this.me].active[0].hp == 0) {
                 this.isTerminal = true;
             }
-            if (this.sides[this.me].currentRequest != 'move') {
+            else if (this.sides[1 - this.me].currentRequest == 'switch') {
                 this.badTerminal = true;
             }
         }
@@ -136,19 +87,23 @@ class MultiTLAgent {
         // Next we simulate the outcome of all our possible actions, while assuming our opponent does nothing each turn (uses splash, but it's kind of the same thing).
         // The gamestate receives choice data as an array with 4 items
         // battle id (we can ignore this), type (we use 'choose' to indicate a choice is made), player (formatted as p1 or p2), choice
+        console.time('bfstest');
+
         for (var choice in options) {
             var cstate = this.cloneBattle(nstate);
             var starthp = cstate.sides[1 - cstate.me].active[0].hp;
             var moveid = options[choice].id;
             cstate.isTerminal = false;
             cstate.baseMove = choice;
-            this.chooseSkip(cstate.sides[1 - cstate.me]);
+            cstate.choose('p' + (1 - this.mySID + 1), 'forceskip');
             cstate.choose('p' + (this.mySID + 1), choice);
             // A variable to track if the state is an end state (an end state here is defined as an event wherein the opponent is forced to switch).
             if (cstate.isTerminal) {
-                return cstate.baseMove;
+                //return cstate.baseMove;
             }
-            states.push(cstate);
+            if (!cstate.badTerminal) {
+                states.push(cstate);
+            }
         }
 
         // console.log(nothing);
@@ -166,17 +121,19 @@ class MultiTLAgent {
             var myTurnOptions = this.getOptions(cState, mySide.id);
             for (var choice in myTurnOptions) {
                 var nstate = this.cloneBattle(cState);
-                var starthp = nstate.sides[1 - cState.me].active[0].hp;
-                this.chooseSkip(nstate.sides[1 - nstate.me]);                
-                nstate.receive(['', 'choose', 'p' + (this.mySID + 1), choice]);
+                nstate.choose('p' + (1 - this.mySID + 1), 'forceskip');
+                nstate.choose('p' + (this.mySID + 1), choice);
+                i++;
                 if (nstate.isTerminal) {
-                    return nstate.baseMove;
+                    //return nstate.baseMove;
                 }
-                states.push(nstate);
-            }
-            i++;
-            
+                if (!nstate.badTerminal) {
+                    states.push(nstate);
+                }
+            }            
         }
+        console.timeEnd('bfstest');
+        console.log(killme);
         console.log('oops I timed out!');
         return this.fetch_random_key(options);
     }
