@@ -6,6 +6,7 @@ var BattleSide = require('../zarel/battle-engine').BattleSide;
 
 class Neuron {
     constructor(weights) {
+        this.saveWeights = false;
         this.weights = {};
         if (weights) {
             this.weights = weights;
@@ -312,8 +313,10 @@ class QLearning {
         var arr = line.split("|");
         var tag = arr[1];
         if (tag == 'win') {
-            var fs = require('fs');
-            fs.writeFileSync(this.filename, JSON.stringify(this.perceptron.weights));
+            if (this.saveWeights) {
+                var fs = require('fs');
+                fs.writeFileSync(this.filename, JSON.stringify(this.perceptron.weights));
+            }
         }
         else if (tag == 'faint') {
             if (arr[2].startsWith(this.mySide)) {

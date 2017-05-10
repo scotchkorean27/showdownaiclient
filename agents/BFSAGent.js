@@ -118,7 +118,7 @@ class MultiTLAgent {
         while ((new Date()).getTime() - n < 19000) {
             var cState = states.shift();
             if (!cState) {
-                console.log('FAILURE!');
+                // console.log('FAILURE!');
                 return this.fetch_random_key(options);
             }
             var myTurnOptions = this.getOptions(cState, mySide.id);
@@ -135,7 +135,7 @@ class MultiTLAgent {
                 }
             }            
         }
-        console.log('oops I timed out!');
+        // console.log('oops I timed out!');
         return this.fetch_random_key(options);
     }
 

@@ -93,6 +93,7 @@ class Neuron {
 
 class MultiLayerQLearning {
     constructor() {
+        this.saveWeights = false;
         this.name = 'MLQ';
         var fs = require('fs');
         this.filename = 'MLQ.json';
@@ -335,12 +336,13 @@ class MultiLayerQLearning {
     }
 
     digest(line) {
-        console.log(line);
         var arr = line.split("|");
         var tag = arr[1];
         if (tag == 'win') {
-            var fs = require('fs');
-            fs.writeFileSync(this.filename, JSON.stringify({ hiddenLayer: this.hiddenLayer, outputLayer: this.outputLayer }));
+            if (this.saveWeights) {
+                var fs = require('fs');
+                fs.writeFileSync(this.filename, JSON.stringify({ hiddenLayer: this.hiddenLayer, outputLayer: this.outputLayer }));
+            }
         }
         else if (tag == 'faint') {
             var target = arr[2].startsWith(this.mySide) ? -1 : 1;

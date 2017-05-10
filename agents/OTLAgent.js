@@ -5,7 +5,7 @@ var deepcopy = require('deepcopy');
 
 // 
 class OTLAgent {
-    constructor() { }
+    constructor() { this.name = 'OTL'; }
 
     fetch_random_key(obj) {
         var temp_key, keys = [];

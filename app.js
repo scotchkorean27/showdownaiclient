@@ -4,12 +4,13 @@ Tools.includeData();
 
 var OfflineGame = require('./OfflineGame').OfflineGame;
 var InterfaceLayer = require('./interfaceLayer').InterfaceLayer;
-var Agent = require('./agents/OTLAgent').Agent;
+var OTLAgent = require('./agents/OTLAgent').Agent;
 var QLearningAgent = require('./agents/QLearner').Agent;
 var MLQAgent = require('./agents/MLQLearner').Agent;
 var RandomAgent = require('./agents/RandomAgent').Agent;
 var BFSAgent = require('./agents/BFSAgent').Agent;
 var MinimaxAgent = require('./agents/MinimaxAgent').Agent;
+var SPAgent = require('./agents/SPessimist').Agent;
 
 try {
     require.resolve('./zarel/config/config');
@@ -169,7 +170,11 @@ else {
             done();
         }
     });
-    var game = new OfflineGame();
-    game.playGames(new BFSAgent(), new MinimaxAgent(), 30, 'competitive');
+    var scores = [];
+    for (var i = 0; i < 15; i++) {
+        var game = new OfflineGame();
+        scores.push(game.playGames(new SPAgent(), new OTLAgent(), 1, 'competitive'));
+    }
+    console.log(scores);
     console.log("THIS WAS AN EXPERIMENT! DO NOT CLOSE THIS!");
 }

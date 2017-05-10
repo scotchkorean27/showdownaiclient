@@ -7,7 +7,7 @@ var PriorityQueue = require('priorityqueuejs');
 
 // Sometimes you want to simulate things in the game that are more complicated than just damage.  For these things, we can advance our fun little forward model.
 // This agent shows a way to advance the forward model.
-class VGreedyAgent {
+class PrunedMinimaxAgent {
     constructor() { this.name = 'minimax' }
 
     cloneBattle(state) {
@@ -219,4 +219,4 @@ class VGreedyAgent {
     }
 }
 
-exports.Agent = VGreedyAgent;
+exports.Agent = PrunedMinimaxAgent;

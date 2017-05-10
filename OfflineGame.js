@@ -10,6 +10,7 @@ class OfflineLayer {
         var p1wins = 0;
         var p2wins = 0;
         for (var i = 0; i < numgames; i++) {
+            console.log(i);
             var isComp = (toId(format) == 'competitive');
             format = (isComp ? 'randombattle': format);
             var p1 = { name: p1n, userid: p1n, interface: new InterfaceLayer('test game', p1n, null, agent1)};
@@ -35,7 +36,8 @@ class OfflineLayer {
                 p2.team = teamb;
 
                 format = 'competitive';
-                for (var i = 0; i < 2; i++) {
+                for (var j = 0; j < 2; j++) {
+                    console.log(j);
                     p1.interface = new InterfaceLayer('test game', p1n, null, agent1);
                     p2.interface = new InterfaceLayer('test game', p2n, null, agent2);
                     var roomData = { id: 'test room' }
@@ -53,7 +55,8 @@ class OfflineLayer {
                 }
                 p1.team = teamb;
                 p2.team = teama;
-                for (var i = 0; i < 3; i++) {
+                for (var j = 0; j < 3; j++) {
+                    console.log(j);
                     p1.interface = new InterfaceLayer('test game', p1n, null, agent1);
                     p2.interface = new InterfaceLayer('test game', p2n, null, agent2);
                     var roomData = { id: 'test room' }
@@ -73,6 +76,7 @@ class OfflineLayer {
         }
         console.log(p1n + ' wins: ' + p1wins);
         console.log(p2n + ' wins: ' + p2wins);
+        return [p1wins, p2wins];
     }
     //console.log(battle);
 }

@@ -39,6 +39,7 @@
     <Compile Include="agents\QLearner.js" />
     <Compile Include="agents\RandomAgent.js" />
     <Compile Include="agents\MinimaxAgent.js" />
+    <Compile Include="agents\SPessimist.js" />
     <Compile Include="app.js" />
     <Compile Include="clone.js" />
     <Compile Include="InterfaceLayer.js" />
