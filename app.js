@@ -11,6 +11,7 @@ var RandomAgent = require('./agents/RandomAgent').Agent;
 var BFSAgent = require('./agents/BFSAgent').Agent;
 var MinimaxAgent = require('./agents/MinimaxAgent').Agent;
 var SPAgent = require('./agents/SPessimist').Agent;
+var PMMAgent = require('./agents/PMinimax').Agent;
 
 try {
     require.resolve('./zarel/config/config');
@@ -171,9 +172,9 @@ else {
         }
     });
     var scores = [];
-    for (var i = 0; i < 15; i++) {
+    for (var i = 0; i < 1; i++) {
         var game = new OfflineGame();
-        scores.push(game.playGames(new SPAgent(), new OTLAgent(), 1, 'competitive'));
+        scores.push(game.playGames(new QLearningAgent(), new MinimaxAgent(), 1, 'competitive'));
     }
     console.log(scores);
     console.log("THIS WAS AN EXPERIMENT! DO NOT CLOSE THIS!");

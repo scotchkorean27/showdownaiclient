@@ -3,12 +3,11 @@
 var Pokemon = require('../zarel/battle-engine').BattlePokemon;
 var clone = require('../clone')
 var BattleSide = require('../zarel/battle-engine').BattleSide;
-var PriorityQueue = require('priorityqueuejs');
 
 // Sometimes you want to simulate things in the game that are more complicated than just damage.  For these things, we can advance our fun little forward model.
 // This agent shows a way to advance the forward model.
-class VGreedyAgent {
-    constructor() { this.name = 'minimax' }
+class MultiTLAgent {
+    constructor() { this.name = 'BFS' }
 
     cloneBattle(state) {
         var nBattle = clone(state);
@@ -24,15 +23,10 @@ class VGreedyAgent {
             player = parseInt(player.substring(1)) - 1;
         }
         let activeData = state.sides[player].active.map(pokemon => pokemon && pokemon.getRequestData());
-        if (!state.sides[player].currentRequest) {
-            return {
-                forceskip: 'skip'
-            };
-        }
         if (state.sides[player].currentRequest == 'switch') {
-            return this.parseRequestData({ side: state.sides[player].getData() });
+            return this.parseRequestData({side: state.sides[player].getData()});
         }
-        return this.parseRequestData({ active: activeData, side: state.sides[player].getData(), rqid: state.rqid });
+        return this.parseRequestData( { active: activeData, side: state.sides[player].getData(), rqid: state.rqid } );
     }
 
     fetch_random_key(obj) {
@@ -70,30 +64,7 @@ class VGreedyAgent {
         return cTurnOptions;
     }
 
-    evaluateState(state) {
-        var myp = state.sides[state.me].active[0].hp / state.sides[state.me].active[0].maxhp;
-        var thp = state.sides[1 - state.me].active[0].hp / state.sides[1 - state.me].active[0].maxhp;
-        return myp - 3 * thp - 0.3 * state.turn;
-    }
-
-    getWorstOutcome(state, playerChoice, player) {
-        var nstate = this.cloneBattle(state);
-        var oppChoices = this.getOptions(nstate, 1 - player);
-        var worststate = null;
-        for (var choice in oppChoices) {
-            var cstate = this.cloneBattle(nstate);
-            cstate.choose('p' + (player + 1), playerChoice);
-            cstate.choose('p' + (1 - player + 1), choice);
-            if (worststate == null || this.evaluateState(cstate, player) < this.evaluateState(worststate, player)) {
-                worststate = cstate;
-            }
-        }
-        return worststate;
-    }
-
     decide(gameState, options, mySide, forceSwitch) {
-        var d = new Date();
-        var n = d.getTime();
         // It is important to start by making a deep copy of gameState.  We want to avoid accidentally modifying the gamestate.
         var nstate = this.cloneBattle(gameState);
         nstate.p1.currentRequest = 'move';
@@ -102,100 +73,91 @@ class VGreedyAgent {
         this.mySID = mySide.n;
         this.mySide = mySide.id;
 
+        var d = new Date();
+        var n = d.getTime();
+
         function battleSend(type, data) {
             if (this.sides[1 - this.me].active[0].hp == 0) {
                 this.isTerminal = true;
             }
-            else if (this.sides[1 - this.me].currentRequest == 'switch' || this.sides[this.me].active[0].hp == 0) {
+            else if (this.sides[1 - this.me].currentRequest == 'switch') {
                 this.badTerminal = true;
             }
         }
-
-        nstate.send = battleSend;
-
-        var pQueue = new PriorityQueue(function (a, b) {
-            var myp = a.sides[a.me].active[0].hp / a.sides[a.me].active[0].maxhp;
-            var thp = a.sides[1 - a.me].active[0].hp / a.sides[1 - a.me].active[0].maxhp;
-            var aeval = myp - 3 * thp - 0.3 * a.turn;
-
-            var mypb = b.sides[b.me].active[0].hp / b.sides[b.me].active[0].maxhp;
-            var thpb = b.sides[1 - b.me].active[0].hp / b.sides[1 - b.me].active[0].maxhp;
-            var beval = mypb - 3 * thpb - 0.3 * b.turn;
-
-            return aeval - beval;
-            }
-        );
         
+        nstate.send = battleSend;
+        var states = [];
+        // Next we simulate the outcome of all our possible actions, while assuming our opponent does nothing each turn (uses splash, but it's kind of the same thing).
+        // The gamestate receives choice data as an array with 4 items
+        // battle id (we can ignore this), type (we use 'choose' to indicate a choice is made), player (formatted as p1 or p2), choice
+
+
         for (var choice in options) {
             var cstate = this.cloneBattle(nstate);
+            var starthp = cstate.sides[1 - cstate.me].active[0].hp;
+            var moveid = options[choice].id;
+            cstate.isTerminal = false;
             cstate.baseMove = choice;
-            var badstate = this.getWorstOutcome(cstate, choice, nstate.me);
-            if (badstate.isTerminal) {
-                return badstate.baseMove;
+            cstate.choose('p' + (1 - this.mySID + 1), 'forceskip');
+            cstate.choose('p' + (this.mySID + 1), choice);
+            // A variable to track if the state is an end state (an end state here is defined as an event wherein the opponent is forced to switch).
+            if (cstate.isTerminal) {
+                //return cstate.baseMove;
             }
-            if (!badstate.badTerminal) {
-                pQueue.enq(badstate);
+            if (!cstate.badTerminal) {
+                states.push(cstate);
             }
         }
 
+        // console.log(nothing);
+        
         var i = 0;
-        while ((new Date()).getTime() - n <= 19000) {
-            if (pQueue.isEmpty()) {
+        
+        //console.log(gameState);
+        
+        while ((new Date()).getTime() - n < 19000) {
+            var cState = states.shift();
+            if (!cState) {
                 // console.log('FAILURE!');
                 return this.fetch_random_key(options);
             }
-            var cState = pQueue.deq();
             var myTurnOptions = this.getOptions(cState, mySide.id);
             for (var choice in myTurnOptions) {
-                var nstate = this.getWorstOutcome(cState, choice, cState.me);
-                if (nstate && nstate.isTerminal) {
+                var nstate = this.cloneBattle(cState);
+                nstate.choose('p' + (1 - this.mySID + 1), 'forceskip');
+                nstate.choose('p' + (this.mySID + 1), choice);
+                i++;
+                if (nstate.isTerminal) {
                     return nstate.baseMove;
                 }
-                if (nstate && !nstate.badTerminal) {
-                    pQueue.enq(nstate);
+                if (!nstate.badTerminal) {
+                    states.push(nstate);
                 }
-            }
-            i++;
-
+            }            
         }
         // console.log('oops I timed out!');
-        if (!pQueue.isEmpty()) {
-            return pQueue.deq().baseMove;
-        }
         return this.fetch_random_key(options);
     }
 
     assumePokemon(pname, plevel, pgender, side) {
-        var template = Tools.getTemplate(pname);
         var nSet = {
             species: pname,
             name: pname,
             level: plevel,
             gender: pgender,
-            evs: {
-                hp: 85,
-                atk: 85,
-                def: 85,
-                spa: 85,
-                spd: 85,
-                spe: 85
-            },
+            evs: { hp: 100, atk: 100, def: 100, spa: 100, spd: 100, spe: 0 },
             ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
             nature: "Hardy",
-            moves: [],
+            ability: "Honey Gather"
         };
-        for (var moveid in template.randomBattleMoves) {
-            nSet.moves.push(toId(template.randomBattleMoves[moveid]));
-        }
-        var basePokemon = new Pokemon(nSet, side);
         // If the species only has one ability, then the pokemon's ability can only have the one ability.
         // Barring zoroark, skill swap, and role play nonsense.
         // This will be pretty much how we digest abilities as well
-        if (Object.keys(basePokemon.template.abilities).length == 1) {
-            basePokemon.baseAbility = toId(basePokemon.template.abilities['0']);
-            basePokemon.ability = basePokemon.baseAbility;
-            basePokemon.abilityData = { id: basePokemon.ability };
+        if (Object.keys(Tools.getTemplate(pname).abilities).length == 1) {
+            nSet.ability = Tools.getTemplate(pname).abilities['0'];
         }
+        var basePokemon = new Pokemon(nSet, side);
+        
         return basePokemon;
     }
 
@@ -203,4 +165,4 @@ class VGreedyAgent {
     }
 }
 
-exports.Agent = VGreedyAgent;
+exports.Agent = MultiTLAgent;

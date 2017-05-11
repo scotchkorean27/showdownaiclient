@@ -254,6 +254,10 @@ class QLearning {
         var nState = this.cloneBattle(gameState);
         nState.me = mySide.n;
 
+        if (Math.random() < 0.1) {
+            return this.fetch_random_key(options);
+        }
+
         var bestscore = -1;
         var bestchoice = '';
         var bestencoding = {};

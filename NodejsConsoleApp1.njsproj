@@ -30,9 +30,11 @@
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="agents\PBFS.js" />
     <Compile Include="agents\BFSAgent.js" />
     <Compile Include="agents\CloneTest.js" />
     <Compile Include="agents\DSBFS.js" />
+    <Compile Include="agents\PMinimax.js" />
     <Compile Include="agents\OTLAgent2.js" />
     <Compile Include="agents\OTLAgent.js" />
     <Compile Include="agents\MLQLearner.js" />

@@ -17,38 +17,11 @@ class SPAgent {
 
     decide(gameState, options, mySide, forceSwitch) {
         var maxDamage = 0;
-        var bOption = '';
+        var bOption = this.fetch_random_key(options);
         //console.log(options);
         var oppactive = gameState.sides[1 - mySide.n].active[0];
         if (!forceSwitch) {
             var kChance = false;
-            var dChance = false;
-            for (var move of oppactive.moves) {
-                dChance = gameState.getDamage(oppactive, mySide.active[0], move, false) > mySide.active[0].hp ? true : false;
-            }
-            if (dChance) {
-                console.log("I FORSEE DEATH");
-                var bswitch = '';
-                var bdamage = 1000;
-                for (var option in options) {
-                    if (option.startsWith('switch')) {
-                        var poke = mySide.pokemon[options[option].index];
-                        var wdamage = 0;
-                        for (var move of oppactive.moves) {
-                            var damage = gameState.getDamage(oppactive, poke, move, false);
-                            if (damage > wdamage) {
-                                wdamage = damage;
-                            }
-                        }
-                        if (wdamage < bdamage) {
-                            bdamage = wdamage;
-                            bswitch = option;
-                        }
-                    }
-                }
-                return bswitch;
-            }
-
             for (var option in options) {
                 if (option.startsWith('move')) {
                     var cDamage = gameState.getDamage(mySide.active[0], oppactive, options[option].id, false);
@@ -72,12 +45,24 @@ class SPAgent {
             var typetotal = 0;
             for (var mtype of mySide.active[0].types) {
                 for (var otype of oppactive.types) {
-                    typetotal += (Tools.getImmunity(mtype, otype) ? (Tools.getEffectiveness(mtype, otype) == 2 ? -1 : Tools.getEffectiveness(mtype, otype)) : -2);
-                    typetotal -= (Tools.getImmunity(otype, mtype) ? (Tools.getEffectiveness(otype, mtype) == 2 ? -1 : Tools.getEffectiveness(otype, mtype)) : -2);
+                    typetotal += (Tools.getImmunity(mtype, otype) ? (Tools.getEffectiveness(mtype, otype)) : -2);
+                    typetotal -= (Tools.getImmunity(otype, mtype) ? (Tools.getEffectiveness(otype, mtype)) : -2);
                 }
             }
             if (typetotal >= 0) {
-                return bOption;
+                if (mySide.active[0].stats.atk + mySide.active[0].stats.spa > mySide.active[0].stats.def + mySide.active[0].stats.spd) {
+                    return bOption;
+                }
+                else {
+                    for (var choice in options) {
+                        if (choice.startsWith('move')) {
+                            var move = Tools.getMove(options[choice].id);
+                            if (move.status && move.status != 'slp' && oppactive.status == '') {
+                                return choice;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -92,8 +77,8 @@ class SPAgent {
                 var poke = mySide.pokemon[choice.index];
                 for (var mtype of poke.types) {
                     for (var otype of oppactive.types) {
-                        ttotal += (Tools.getImmunity(mtype, otype) ? (Tools.getEffectiveness(mtype, otype) == 2 ? -1 : Tools.getEffectiveness(mtype, otype)) : -2);
-                        ttotal -= (Tools.getImmunity(otype, mtype) ? (Tools.getEffectiveness(otype, mtype) == 2 ? -1 : Tools.getEffectiveness(otype, mtype)) : -2);
+                        ttotal += (Tools.getImmunity(mtype, otype) ? (Tools.getEffectiveness(mtype, otype)) : -2);
+                        ttotal -= (Tools.getImmunity(otype, mtype) ? (Tools.getEffectiveness(otype, mtype)) : -2);
                     }
                 }
                 for (var moveid of poke.moves) {

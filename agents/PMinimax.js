@@ -8,7 +8,7 @@ var PriorityQueue = require('priorityqueuejs');
 // Sometimes you want to simulate things in the game that are more complicated than just damage.  For these things, we can advance our fun little forward model.
 // This agent shows a way to advance the forward model.
 class PrunedMinimaxAgent {
-    constructor() { this.name = 'minimax' }
+    constructor() { this.name = 'pruned minimax' }
 
     cloneBattle(state) {
         var nBattle = clone(state);
@@ -80,7 +80,42 @@ class PrunedMinimaxAgent {
         var nstate = this.cloneBattle(state);
         var oppChoices = this.getOptions(nstate, 1 - player);
         var worststate = null;
+
+        var prunedOppChoices = {};
+
+        var wtyping = -3;
+
         for (var choice in oppChoices) {
+            if (choice.startsWith('move')) {
+                var move = Tools.getMove(oppChoices[choice].id);
+                if (move.category != 'Status') {
+                    if (Tools.getEffectiveness(move.type, nstate.sides[player].active[0].types) >= wtyping) {
+                        if (Tools.getEffectiveness(move.type, nstate.sides[player].active[0].types) > wtyping) {
+                            prunedOppChoices = {};
+                        }
+                        prunedOppChoices[choice] = oppChoices[choice];
+                        wtyping = Tools.getEffectiveness(move.type, nstate.sides[player].active[0].types);
+                    }
+                }
+            }
+        }
+
+        for (var choice in oppChoices) {
+            if (choice.startsWith('move')) {
+                var move = Tools.getMove(oppChoices[choice].id);
+                if (move.category == 'Status') {
+                    prunedOppChoices[choice] = oppChoices[choice];
+                }
+            }
+        }
+
+        for (var choice in oppChoices) {
+            if (!choice.startsWith('move')) {
+                prunedOppChoices[choice] = oppChoices[choice];
+            }
+        }
+
+        for (var choice in prunedOppChoices) {
             var cstate = this.cloneBattle(nstate);
             cstate.choose('p' + (player + 1), playerChoice);
             cstate.choose('p' + (1 - player + 1), choice);
@@ -140,29 +175,41 @@ class PrunedMinimaxAgent {
 
         var i = 0;
         while ((new Date()).getTime() - n <= 19000) {
-            
-            // console.log(pQueue.size());
-            // console.log(this.evaluateState(cState, cState.me) + ", " + (cState.sides[cState.me].active[0].hp / cState.sides[cState.me].active[0].maxhp) + ", " + (cState.sides[1 - cState.me].active[0].hp / cState.sides[1 - cState.me].active[0].maxhp));
-            /*
-            if (cState.sides[1 - cState.me].active[0].hp == preveval) {
-                if (shitcounter >= 5) {
-                    console.log(cState.log);
-                    console.log(killme);
-                }
-                shitcounter++;
-            }
-            else {
-                preveval = cState.sides[1 - cState.me].active[0].hp;
-                shitcounter = 0;
-            }
-            */
             if (pQueue.isEmpty()) {
                 // console.log('FAILURE!');
                 return this.fetch_random_key(options);
             }
             var cState = pQueue.deq();
             var myTurnOptions = this.getOptions(cState, mySide.id);
+
+            var prunedOptions = {};
+            var btyping = -3;
+
             for (var choice in myTurnOptions) {
+                if (choice.startsWith('move')) {
+                    var move = Tools.getMove(myTurnOptions[choice].id);
+                    if (move.category != 'Status') {
+                        if (Tools.getEffectiveness(move.type, cState.sides[1 - cState.me].active[0].types) >= btyping) {
+                            if (Tools.getEffectiveness(move.type, cState.sides[1 - cState.me].active[0].types) > btyping) {
+                                prunedOptions = {};
+                            }
+                            prunedOptions[choice] = myTurnOptions[choice];
+                            btyping = Tools.getEffectiveness(move.type, cState.sides[1 - cState.me].active[0].types);
+                        }
+                    }
+                }
+            }
+
+            for (var choice in myTurnOptions) {
+                if (choice.startsWith('move')) {
+                    var move = Tools.getMove(myTurnOptions[choice].id);
+                    if (move.category == 'Status') {
+                        prunedOptions[choice] = myTurnOptions[choice];
+                    }
+                }
+            }
+
+            for (var choice in prunedOptions) {
                 var nstate = this.getWorstOutcome(cState, choice, cState.me);
                 if (nstate && nstate.isTerminal) {
                     return nstate.baseMove;

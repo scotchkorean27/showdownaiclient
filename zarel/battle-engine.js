@@ -3277,6 +3277,9 @@ let Battle = (() => {
 	};
 	Battle.prototype.nextTurn = function () {
 		this.turn++;
+        if (this.turn >= 200) {
+            this.tie();    
+        }
 		let allStale = true;
 		let oneStale = false;
 		for (let i = 0; i < this.sides.length; i++) {

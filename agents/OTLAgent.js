@@ -51,7 +51,7 @@ class OTLAgent {
                 maxDamage = 1;
             }
         }
-        console.log(bOption);
+        // console.log(bOption);
         return bOption;
     }
 
