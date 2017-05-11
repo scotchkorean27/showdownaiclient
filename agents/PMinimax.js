@@ -4,6 +4,7 @@ var Pokemon = require('../zarel/battle-engine').BattlePokemon;
 var clone = require('../clone')
 var BattleSide = require('../zarel/battle-engine').BattleSide;
 var PriorityQueue = require('priorityqueuejs');
+var OppAgent = require('../agents/OTLAgent').Agent;
 
 // Sometimes you want to simulate things in the game that are more complicated than just damage.  For these things, we can advance our fun little forward model.
 // This agent shows a way to advance the forward model.
@@ -77,53 +78,19 @@ class PrunedMinimaxAgent {
     }
 
     getWorstOutcome(state, playerChoice, player) {
+        var opponent = new OppAgent();
         var nstate = this.cloneBattle(state);
         var oppChoices = this.getOptions(nstate, 1 - player);
-        var worststate = null;
-
-        var prunedOppChoices = {};
-
-        var wtyping = -3;
-
+        var pOppC = {};
         for (var choice in oppChoices) {
             if (choice.startsWith('move')) {
-                var move = Tools.getMove(oppChoices[choice].id);
-                if (move.category != 'Status') {
-                    if (Tools.getEffectiveness(move.type, nstate.sides[player].active[0].types) >= wtyping) {
-                        if (Tools.getEffectiveness(move.type, nstate.sides[player].active[0].types) > wtyping) {
-                            prunedOppChoices = {};
-                        }
-                        prunedOppChoices[choice] = oppChoices[choice];
-                        wtyping = Tools.getEffectiveness(move.type, nstate.sides[player].active[0].types);
-                    }
-                }
+                pOppC[choice] = oppChoices[choice];
             }
         }
+        nstate.choose('p' + (player + 1), playerChoice);
+        nstate.choose('p' + (1 - player + 1), opponent.decide(nstate, pOppC, nstate.sides[1 - player]));
 
-        for (var choice in oppChoices) {
-            if (choice.startsWith('move')) {
-                var move = Tools.getMove(oppChoices[choice].id);
-                if (move.category == 'Status') {
-                    prunedOppChoices[choice] = oppChoices[choice];
-                }
-            }
-        }
-
-        for (var choice in oppChoices) {
-            if (!choice.startsWith('move')) {
-                prunedOppChoices[choice] = oppChoices[choice];
-            }
-        }
-
-        for (var choice in prunedOppChoices) {
-            var cstate = this.cloneBattle(nstate);
-            cstate.choose('p' + (player + 1), playerChoice);
-            cstate.choose('p' + (1 - player + 1), choice);
-            if (worststate == null || this.evaluateState(cstate, player) < this.evaluateState(worststate, player)) {
-                worststate = cstate;
-            }
-        }
-        return worststate;
+        return nstate;
     }
 
     decide(gameState, options, mySide, forceSwitch) {

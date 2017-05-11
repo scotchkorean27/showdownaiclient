@@ -172,9 +172,11 @@ else {
         }
     });
     var scores = [];
-    for (var i = 0; i < 1; i++) {
+    for (var i = 0; i < 2; i++) {
         var game = new OfflineGame();
-        scores.push(game.playGames(new QLearningAgent(), new MinimaxAgent(), 1, 'competitive'));
+        console.time('gametime');
+        scores.push(game.playGames(new PMMAgent(), new RandomAgent(), 1, 'competitive'));
+        console.timeEnd('gametime');
     }
     console.log(scores);
     console.log("THIS WAS AN EXPERIMENT! DO NOT CLOSE THIS!");
