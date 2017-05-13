@@ -25,7 +25,7 @@ class OfflineLayer {
             if (battle.battle.winner == p1.userid) {
                 p1wins++;
             }
-            else {
+            else if (battle.battle.winner == p2.userid) {
                 p2wins++;
             }
             console.log(battle.battle.winner + ' is the winner!');
@@ -49,7 +49,7 @@ class OfflineLayer {
                     if (battle.battle.winner == p1.userid) {
                         p1wins++;
                     }
-                    else {
+                    else if (battle.battle.winner == p2.userid) {
                         p2wins++;
                     }
                 }
@@ -68,7 +68,7 @@ class OfflineLayer {
                     if (battle.battle.winner == p1.userid) {
                         p1wins++;
                     }
-                    else {
+                    else if (battle.battle.winner == p2.userid) {
                         p2wins++;
                     }
                 }
