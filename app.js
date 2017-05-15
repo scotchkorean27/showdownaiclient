@@ -12,6 +12,7 @@ var BFSAgent = require('./agents/BFSAgent').Agent;
 var MinimaxAgent = require('./agents/MinimaxAgent').Agent;
 var SPAgent = require('./agents/SPessimist').Agent;
 var PMMAgent = require('./agents/PMinimax').Agent;
+var BrokenAgent = require('./agents/CloneTest').Agent;
 
 try {
     require.resolve('./zarel/config/config');
@@ -26,7 +27,7 @@ try {
     global.Config = require('./zarel/config/config');
 }
 
-var online = false;
+var online = true;
 
 // Online mode operates very very differently from offline.
 // Naturally, it needs a place to connect to.
@@ -46,8 +47,8 @@ if (online) {
     var attemptLogin = true;
     //  The agent will attempt to initiate this many battles
     var battleCount = 2;
-    var username = '';
-    var password = '';
+    var username = 'TeamRocketAI';
+    var password = 'polyai';
     // This is where you would put the formats that you are interested in having your AI participate in.
     var formats = ['randombattle', 'randommirror'];
     
@@ -62,12 +63,12 @@ if (online) {
             this.ws = ws;
         }
         send(message, extra) {
+            console.log(message);
             ws.send(message);
         }
     }
 
     ws.on('message', function receive(data, flags) {
-
         var arr = data.split('|');
         var tag = "" + arr[1];
         if (tag == 'challstr') {
@@ -82,7 +83,7 @@ if (online) {
             cuser = arr[2];
             console.log('Logged in as ' + cuser);
             ws.send('|/join lobby');
-            for (var format in formats) {
+            for (var format of formats) {
                 ws.send('|/search ' + format);
             }
         }
@@ -92,10 +93,10 @@ if (online) {
         else if (data.startsWith('\>')) {
             var roomid = data.split("\n")[0].substring(1);
             if (battles.has(roomid) == false) {
-                battles.set(roomid, new InterfaceLayer(roomid, cuser, new WSLayer(this), new Agent()));
+                battles.set(roomid, new InterfaceLayer(roomid, cuser, new WSLayer(this), new OTLAgent()));
                 battleCount--;
                 if (battleCount > 0) {
-                    for (var format in formats) {
+                    for (var format of formats) {
                         ws.send('|/search ' + format);
                     }
                 }
@@ -172,12 +173,14 @@ else {
         }
     });
     var scores = [];
-    for (var i = 0; i < 2; i++) {
+
+    console.time('gametime');
+    for (var i = 0; i < 1; i++) {
         var game = new OfflineGame();
-        console.time('gametime');
-        scores.push(game.playGames(new PMMAgent(), new RandomAgent(), 1, 'competitive'));
-        console.timeEnd('gametime');
+        scores.push(game.playGames(new RandomAgent(), new BrokenAgent(), 1, 'competitive'));
+        
     }
+    console.timeEnd('gametime');
     console.log(scores);
     console.log("THIS WAS AN EXPERIMENT! DO NOT CLOSE THIS!");
 }
