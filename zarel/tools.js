@@ -1174,7 +1174,34 @@ module.exports = (() => {
 		for (let i in this.data.Scripts) {
 			battle[i] = this.data.Scripts[i];
 		}
-	};
+    };
+
+    // ShowdownAI: Parses the request data sent by the server or retrieved from BattleSide.getRequestData()
+    // Returns the set of usable options based on the request data.
+    Tools.prototype.parseRequestData = function (requestData) {
+        if (typeof (requestData) == 'string') { requestData = JSON.parse(request); }
+        var cTurnOptions = {};
+        if (requestData['active']) {
+            for (var i = 0; i < requestData['active'][0]['moves'].length; i++) {
+                if (requestData['active'][0]['moves'][i]['disabled'] == false && requestData['active'][0]['moves'][i].pp > 0) {
+                    cTurnOptions['move ' + requestData['active'][0]['moves'][i].id] = requestData['active'][0]['moves'][i];
+                }
+            }
+        }
+        if (requestData['side'] && !(requestData['active'] && requestData['active'][0]['trapped'])) {
+            // Basically, if we switch to zoroark, the request data will reflect it, but the switch event data will not.
+            // Therefore, if a switch event happens on this turn, we override the swapped pokemon with zoroark
+            for (var i = 1; i < requestData['side']['pokemon'].length; i++) {
+                if (requestData['side']['pokemon'][i].condition.indexOf('fnt') == -1) {
+                    cTurnOptions['switch ' + (i + 1)] = requestData['side']['pokemon'][i];
+                }
+            }
+        }
+        for (var option in cTurnOptions) {
+            cTurnOptions[option].choice = option;
+        }
+        return cTurnOptions;
+    }
 
 	moddedTools.base = new Tools();
 

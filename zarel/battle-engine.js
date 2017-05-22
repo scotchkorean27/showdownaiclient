@@ -1372,6 +1372,22 @@ class BattleSide {
 		return this.choiceData.choices.join(', ');
 	}
 
+    // ShowdownAI: This function will return the currently usable moves of the side
+    // Note that this should NEVER be used in lieu of the received request data from the canonical game state
+    // This is for simulation purposes ONLY.
+    getRequestData() {
+        let activeData = this.active.map(pokemon => pokemon && pokemon.getRequestData());
+        if (!this.currentRequest) {
+            return {
+                forceskip: 'skip'
+            };
+        }
+        if (this.currentRequest == 'switch') {
+            return { side: this.getData() };
+        }
+        return { active: activeData, side: this.getData(), rqid: this.battle.rqid };
+    }
+
 	toString() {
 		return this.id + ': ' + this.name;
 	}
@@ -1969,6 +1985,17 @@ let Battle = (() => {
 	};
 
 	Battle.prototype = {};
+
+    // ShowdownAI: Returns a deep clone of a game state.
+    Battle.prototype.copy = function () {
+        var clone = require('../clone')
+        var nBattle = clone(this);
+        nBattle.p1.getChoice = BattleSide.getChoice.bind(nBattle.p1);
+        nBattle.p2.getChoice = BattleSide.getChoice.bind(nBattle.p2);
+        nBattle.p1.clearChoice();
+        nBattle.p2.clearChoice();
+        return nBattle;
+    }
 
 	Battle.prototype.init = function (roomid, format, rated, send) {
 		this.log = [];

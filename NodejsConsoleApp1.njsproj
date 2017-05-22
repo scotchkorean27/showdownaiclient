@@ -30,18 +30,14 @@
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="agents\PBFS.js" />
     <Compile Include="agents\BFSAgent.js" />
-    <Compile Include="agents\CloneTest.js" />
-    <Compile Include="agents\DSBFS.js" />
-    <Compile Include="agents\PMinimax.js" />
-    <Compile Include="agents\OTLAgent2.js" />
+    <Compile Include="agents\PBFS.js" />
     <Compile Include="agents\OTLAgent.js" />
     <Compile Include="agents\MLQLearner.js" />
     <Compile Include="agents\QLearner.js" />
     <Compile Include="agents\RandomAgent.js" />
     <Compile Include="agents\MinimaxAgent.js" />
-    <Compile Include="agents\SPessimist.js" />
+    <Compile Include="agents\TypeSelector.js" />
     <Compile Include="app.js" />
     <Compile Include="clone.js" />
     <Compile Include="InterfaceLayer.js" />

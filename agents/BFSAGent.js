@@ -1,7 +1,6 @@
 ﻿'use strict';
 
 var Pokemon = require('../zarel/battle-engine').BattlePokemon;
-var clone = require('../clone')
 var BattleSide = require('../zarel/battle-engine').BattleSide;
 
 // Sometimes you want to simulate things in the game that are more complicated than just damage.  For these things, we can advance our fun little forward model.
@@ -9,24 +8,11 @@ var BattleSide = require('../zarel/battle-engine').BattleSide;
 class MultiTLAgent {
     constructor() { this.name = 'BFS' }
 
-    cloneBattle(state) {
-        var nBattle = clone(state);
-        nBattle.p1.getChoice = BattleSide.getChoice.bind(nBattle.p1);
-        nBattle.p2.getChoice = BattleSide.getChoice.bind(nBattle.p2);
-        nBattle.p1.clearChoice();
-        nBattle.p2.clearChoice();
-        return nBattle;
-    }
-
     getOptions(state, player) {
         if (typeof (player) == 'string' && player.startsWith('p')) {
             player = parseInt(player.substring(1)) - 1;
         }
-        let activeData = state.sides[player].active.map(pokemon => pokemon && pokemon.getRequestData());
-        if (state.sides[player].currentRequest == 'switch') {
-            return this.parseRequestData({side: state.sides[player].getData()});
-        }
-        return this.parseRequestData( { active: activeData, side: state.sides[player].getData(), rqid: state.rqid } );
+        return Tools.parseRequestData(state.sides[player].getRequestData());
     }
 
     fetch_random_key(obj) {
@@ -39,34 +25,9 @@ class MultiTLAgent {
         return keys[Math.floor(Math.random() * keys.length)];
     }
 
-    parseRequestData(requestData) {
-        if (typeof (requestData) == 'string') { requestData = JSON.parse(request); }
-        var cTurnOptions = {};
-        if (requestData['active']) {
-            for (var i = 0; i < requestData['active'][0]['moves'].length; i++) {
-                if (requestData['active'][0]['moves'][i]['disabled'] == false && requestData['active'][0]['moves'][i].pp > 0) {
-                    cTurnOptions['move ' + requestData['active'][0]['moves'][i].id] = requestData['active'][0]['moves'][i];
-                }
-            }
-        }
-        if (requestData['side'] && !(requestData['active'] && requestData['active'][0]['trapped'])) {
-            // Basically, if we switch to zoroark, the request data will reflect it, but the switch event data will not.
-            // Therefore, if a switch event happens on this turn, we override the swapped pokemon with zoroark
-            for (var i = 1; i < requestData['side']['pokemon'].length; i++) {
-                if (requestData['side']['pokemon'][i].condition.indexOf('fnt') == -1) {
-                    cTurnOptions['switch ' + (i + 1)] = requestData['side']['pokemon'][i];
-                }
-            }
-        }
-        for (var option in cTurnOptions) {
-            cTurnOptions[option].choice = option;
-        }
-        return cTurnOptions;
-    }
-
     decide(gameState, options, mySide, forceSwitch) {
         // It is important to start by making a deep copy of gameState.  We want to avoid accidentally modifying the gamestate.
-        var nstate = this.cloneBattle(gameState);
+        var nstate = gameState.copy();
         nstate.p1.currentRequest = 'move';
         nstate.p2.currentRequest = 'move';
         nstate.me = mySide.n;
@@ -93,7 +54,7 @@ class MultiTLAgent {
 
 
         for (var choice in options) {
-            var cstate = this.cloneBattle(nstate);
+            var cstate = nstate.copy();
             var starthp = cstate.sides[1 - cstate.me].active[0].hp;
             var moveid = options[choice].id;
             cstate.isTerminal = false;
@@ -118,12 +79,12 @@ class MultiTLAgent {
         while ((new Date()).getTime() - n < 19000) {
             var cState = states.shift();
             if (!cState) {
-                // console.log('FAILURE!');
+                console.log('FAILURE!');
                 return this.fetch_random_key(options);
             }
             var myTurnOptions = this.getOptions(cState, mySide.id);
             for (var choice in myTurnOptions) {
-                var nstate = this.cloneBattle(cState);
+                var nstate = cState.copy();
                 nstate.choose('p' + (1 - this.mySID + 1), 'forceskip');
                 nstate.choose('p' + (this.mySID + 1), choice);
                 i++;

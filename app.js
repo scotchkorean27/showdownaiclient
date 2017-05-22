@@ -10,9 +10,8 @@ var MLQAgent = require('./agents/MLQLearner').Agent;
 var RandomAgent = require('./agents/RandomAgent').Agent;
 var BFSAgent = require('./agents/BFSAgent').Agent;
 var MinimaxAgent = require('./agents/MinimaxAgent').Agent;
-var SPAgent = require('./agents/SPessimist').Agent;
-var PMMAgent = require('./agents/PMinimax').Agent;
-var BrokenAgent = require('./agents/CloneTest').Agent;
+var SPAgent = require('./agents/TypeSelector').Agent;
+var PMMAgent = require('./agents/PBFS').Agent;
 
 try {
     require.resolve('./zarel/config/config');
@@ -27,7 +26,7 @@ try {
     global.Config = require('./zarel/config/config');
 }
 
-var online = true;
+var online = false;
 
 // Online mode operates very very differently from offline.
 // Naturally, it needs a place to connect to.
@@ -175,12 +174,11 @@ else {
     var scores = [];
 
     console.time('gametime');
-    for (var i = 0; i < 1; i++) {
+    for (var i = 0; i < 15; i++) {
         var game = new OfflineGame();
-        scores.push(game.playGames(new RandomAgent(), new BrokenAgent(), 1, 'competitive'));
+        scores.push(game.playGames(new BFSAgent(), new RandomAgent(), 1, 'competitive'));
         
     }
     console.timeEnd('gametime');
     console.log(scores);
-    console.log("THIS WAS AN EXPERIMENT! DO NOT CLOSE THIS!");
 }

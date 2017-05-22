@@ -2,7 +2,7 @@
 
 var Pokemon = require('../zarel/battle-engine').BattlePokemon;
 
-class SPAgent {
+class TypeSelector {
     constructor() { this.name = 'Pessimist' }
 
     fetch_random_key(obj) {
@@ -134,4 +134,4 @@ class SPAgent {
     }
 }
 
-exports.Agent = SPAgent;
+exports.Agent = TypeSelector;
