@@ -1,4 +1,4 @@
-﻿var InterfaceLayer = require('./InterfaceLayer').InterfaceLayer;
+﻿var InterfaceLayer = require('./interfaceLayer').InterfaceLayer;
 var Scripts = require('./zarel/data/scripts').BattleScripts;
 
 class OfflineLayer {
