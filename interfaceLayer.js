@@ -19,6 +19,16 @@ class InterfaceLayer {
         this.zoroarkActive = false;
     }
 
+    fetch_random_key(obj) {
+        var temp_key, keys = [];
+        for (temp_key in obj) {
+            if (obj.hasOwnProperty(temp_key)) {
+                keys.push(temp_key);
+            }
+        }
+        return keys[Math.floor(Math.random() * keys.length)];
+    }
+
     convertTeamToSet(pokemon) {
         var nTeam = [];
         for (var i = 0; i < pokemon.length; i++) {
@@ -251,29 +261,28 @@ class InterfaceLayer {
     runExternalFieldEffect(status) {
         if (status.endsWith('terrain')) {
             this.battle.setTerrain(status);
-            console.log(this.battle.terrain);
+            //console.log(this.battle.terrain);
         }
         else {
-            console.log(status);
+            // console.log(status);
             this.battle.addPseudoWeather(status);
-            console.log(this.battle.pseudoWeather);
+            // console.log(this.battle.pseudoWeather);
         }
     }
 
     runExternalFieldEnd(status) {
         if (status.endsWith('terrain')) {
             this.battle.clearTerrain();
-            console.log(this.battle.terrain);
+            // console.log(this.battle.terrain);
         }
         else {
-            console.log(status);
+            // console.log(status);
             this.battle.removePseudoWeather(status);
-            console.log(this.battle.pseudoWeather);
+            // console.log(this.battle.pseudoWeather);
         }
     }
 
     processLine(line) {
-    
         // right now, super, immune, resist are counted as boring tags.  They do present relevant information in case the information given doesnt line up for whatever reason (see zororark), but in a very niche case, and takes more work to digest
         var boringTags = ["", " ", "init", "title", "j", "gametype", "gen", "seed", "rated", "choice", "-supereffective", "-resisted", "-miss", "-immune", "-crit", "faint", "raw", 'fail', 'cant', '-hitcount', '-singleturn', '-activate', '-fail', '-singlemove', '-notarget'];
         var arr = line.split("|");
@@ -325,6 +334,7 @@ class InterfaceLayer {
                 for (var i = 1; i < requestData['side']['pokemon'].length; i++) {
                     if (requestData['side']['pokemon'][i].condition.indexOf('fnt') == -1) {
                         this.cTurnOptions['switch ' + (i + 1)] = requestData['side']['pokemon'][i];
+                        this.cTurnOptions['switch ' + (i + 1)].index = i;
                     }
                 }
             }
@@ -335,7 +345,12 @@ class InterfaceLayer {
                 this.cTurnMoves[option].choice = option;
             }
             if (requestData['forceSwitch'] && requestData['forceSwitch'][0]) {
-                this.cLayer.send(this.id + '|/choose ' + this.agent.decide(this.battle, this.cTurnOptions, this.battle.sides[this.mySID], true), this.mySide);
+                var choice = '';
+                choice = this.agent.decide(this.battle, this.cTurnOptions, this.battle.sides[this.mySID], true);
+                if (!choice || !this.cTurnOptions[choice]) {
+                    choice = this.fetch_random_key(this.cTurnOptions);
+                }
+                this.cLayer.send(this.id + '|/choose ' + choice, this.mySide);
             }
         }
         else if (tag == 'switch') {
@@ -389,7 +404,7 @@ class InterfaceLayer {
             }
         }
         else if (tag == 'turn') {
-            console.log(line);
+            // console.log(line);
             // Because we never invoke the residual event (since that would set off a lot of other events), we need to manually update turn counters.
             if (this.battle.weatherData && this.battle.weatherData.duration) {
                 this.battle.weatherData.duration--;
@@ -455,8 +470,10 @@ class InterfaceLayer {
             }
             else {
                 choice = this.agent.decide(this.battle, this.cTurnOptions, this.battle.sides[this.mySID]);
+                if (!choice || !this.cTurnOptions[choice]) {
+                    choice = this.fetch_random_key(this.cTurnOptions);
+                }
             }
-            console.log("I chose " + choice);
             this.cLayer.send(this.id + '|/choose ' + choice, this.mySide);
                 // Add code that processes the end of a turn
         }
@@ -466,7 +483,6 @@ class InterfaceLayer {
                 // callback can confirm that they are trapped, but this doesnt tell us anything conclusive.
                 // There's a specific confluence of events wherein a trapped callback reveals the ability of the opponent.
                 this.cLayer.send(this.id + '|/choose ' + this.agent.decide(this.battle, this.cTurnMoves, this.battle.sides[this.mySID]), this.mySide);
-                this.agent.digest(line);
             }
         }
         else if (tag == 'move') {
@@ -475,7 +491,6 @@ class InterfaceLayer {
             //      fs.appendFile('log.txt', line + '\n', function (err) { });
             var sindex = parseInt(arr[2].substring(1)) - 1;
             if (arr[5] && arr[5] == '[from]lockedmove') {
-                console.log(line);
                 var sindex = parseInt(arr[2].substring(1)) - 1;
                 this.runExternalRemoveVolatile(this.battle.sides[sindex].active[0], 'twoturnmove');
                 this.runExternalRemoveVolatile(this.battle.sides[sindex].active[0], toId(arr[3]));
@@ -610,14 +625,11 @@ class InterfaceLayer {
             // we use the battleengine's addvolatile for twoturnmove since it shouldn't throw any really problematic events
             // we then remove the '' volatile that twoturnmove's onstart event adds
             // then we manually add the second volatile
-            console.log(line);
+
             var sindex = parseInt(arr[2].substring(1)) - 1;
             this.battle.sides[sindex].active[0].addVolatile('twoturnmove', this.battle.sides[1 - sindex].active[0]);
             this.runExternalRemoveVolatile(this.battle.sides[sindex].active[0], '');
             this.runExternalAddVolatile(this.battle.sides[sindex].active[0], toId(arr[3]));
-            for (var entry in this.battle.sides[sindex].active[0].volatiles) {
-                console.log(entry);
-            }
         }
         else if (tag == '-start') {
             var status = arr[3];
@@ -738,7 +750,6 @@ class InterfaceLayer {
         // -detailchange is irrelevant here.  No ubers means no primal means no detailchanges
         // -fieldstart refers to pseudoweather as well as terrain.  Because they are processed differently, we have to check whether it is a pseudoweather or a terrain when this line is processed
         else if (tag == '-fieldstart') {
-            console.log(line);
             var status = arr[2]
             if (status.startsWith('move:')) {
                 status = toId(status.split(': ')[1]);
@@ -746,7 +757,6 @@ class InterfaceLayer {
             this.runExternalFieldEffect(status);
         }
         else if (tag == '-fieldend') {
-            console.log(line);
             var status = arr[2]
             if (status.startsWith('move:')) {
                 status = toId(status.split(': ')[1]);
@@ -806,15 +816,12 @@ class InterfaceLayer {
             // teampreview Standards ou only, requires a response of |/team ######|1 (where ###### is the preferred order of pokemon, which we have to reorder in the model)
             // poke is a part of team preview.  Has roughly the same information as switch. |poke|p1|details|hasitem
         else {
-        
-            //    fs.appendFile('log.txt', line + '\n', function (err) { });
-
-            console.log(line);
-            
+           // console.log(line);
         }
+        this.agent.digest(line);
     }
     process(text) {
-        // console.log(text);
+        // console.log(this.id + text);
         var arr = text.split("\n");
         for (var i = 0; i < arr.length; i++) {
             this.processLine(arr[i]);
