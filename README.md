@@ -15,6 +15,8 @@ This is the entry point where you would begin running your AI or simulations.
 
 The "online" variable is a boolean that determines whether this program will be connecting to a server or running games locally.
 
+Due to version issues, the online version does not work, and updating it for gen 7 is not a high priority at the moment.
+
 ### Online mode
 
 For online mode, you must designate a server to connect to by changing the argument being sent in to the websocket initialization. 
