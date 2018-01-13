@@ -1,5 +1,7 @@
 Pokemon Showdown AI Client
 
+## This version of the showdown AI client is, for all intents and purposes, abandoned.  A rewrite is in the works, one that should be better optimized for AI.
+
 This program requires Node.js to run.  Please install the lastest version before attempting to run this program.
 The code can be executing from command line by entering 'node app.js'
 
